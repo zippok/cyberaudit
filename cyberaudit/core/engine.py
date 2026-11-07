@@ -11,7 +11,7 @@ import logging
 import hashlib
 from typing import List, Set, Type
 from cyberaudit.core.base_scanner import BaseScanner
-from cyberaudit.core.models import ScanReport, Finding
+from cyberaudit.core.models import ScanReport, Finding, Pillar, Severity
 
 logger = logging.getLogger("cyberaudit.core.engine")
 
@@ -199,9 +199,11 @@ class AuditEngine:
         exclude_dirs: Set[str] = None,
         exclude_vendor: bool = True,
         archetype: str = "full",
+        enable_external_tools: bool = True,
     ):
         self.exclude_vendor = exclude_vendor
         self.archetype = archetype.lower()
+        self.enable_external_tools = enable_external_tools
         if scanners is None:
             self.scanners: List[BaseScanner] = [
                 # Security Analyst & DFIR
@@ -373,6 +375,30 @@ class AuditEngine:
         files_to_scan.sort()
         report.files_discovered = len(files_to_scan)
 
+        # Stage 0: External-First Industry Tools (npm audit, pip-audit, gitleaks, trivy)
+        # If external tools fail or are absent, graceful fallback ensures native scanners run seamlessly.
+        has_devsecops = any(getattr(s, "pillar", None) in (Pillar.SECURITY_ENGINEER, Pillar.CLOUD_DEFENSE) for s in self.scanners)
+        if self.enable_external_tools and has_devsecops and os.path.isdir(target_path):
+            try:
+                from cyberaudit.core.external_orchestrator import ExternalToolOrchestrator
+                ext_orch = ExternalToolOrchestrator()
+                ext_findings, ext_status = ext_orch.run_external_first(target_path)
+                if ext_findings:
+                    report.findings.extend(ext_findings)
+                if ext_status.get("attempted"):
+                    succeeded_tools = ext_status.get("succeeded", [])
+                    status_label = "PASS" if succeeded_tools else "FALLBACK"
+                    summary_name = f"External Tools ({', '.join(succeeded_tools) or 'Fallback to Native'})"
+                    report.scanner_results.append({
+                        "name": summary_name,
+                        "status": status_label,
+                        "files": len(succeeded_tools),
+                        "errors": len(ext_status.get("failed", [])),
+                        "coverage": "Industry Standard External Tools (npm, pip-audit, gitleaks, trivy) with Graceful Fallback"
+                    })
+            except Exception as e:
+                logger.debug("External tool orchestrator execution skipped: %s", e)
+
         # Run directory-level scans first
         if os.path.isdir(target_path):
             for scanner in self.scanners:
@@ -428,7 +454,7 @@ class AuditEngine:
             deduped_dicts = correlator.deduplicate([f.to_dict() for f in report.findings])
 
             # Reconstruct Finding objects from deduplicated dicts
-            from cyberaudit.core.models import Finding, Severity, Pillar
+            # Models already imported at top-level
             reconstructed = []
             for fd in deduped_dicts:
                 sev = Severity.MEDIUM

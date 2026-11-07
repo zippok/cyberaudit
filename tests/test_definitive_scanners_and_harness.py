@@ -216,6 +216,57 @@ class TestDefinitiveScannersAndHarness(unittest.TestCase):
             self.assertEqual(seal["seal_type"], "SELLO-CYBERAUDIT-VERIFICADO")
             self.assertTrue(os.path.exists(sello_log))
 
+    def test_external_tool_orchestrator_and_graceful_fallback(self):
+        import json
+        import unittest.mock as mock
+        from cyberaudit.core.external_orchestrator import ExternalToolOrchestrator
+
+        orch = ExternalToolOrchestrator(timeout=2.0)
+
+        # Test availability check
+        self.assertIsInstance(orch.is_tool_available("python"), bool)
+        self.assertTrue(orch.is_tool_available("python") or orch.is_tool_available("python3"))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Empty folder: no manifest files -> no attempted tools
+            findings, status = orch.run_external_first(tmpdir)
+            self.assertEqual(len(findings), 0)
+            self.assertEqual(len(status["attempted"]), 0)
+
+            # Add package.json: orchestrator recognizes node project and attempts npm audit
+            pkg_path = os.path.join(tmpdir, "package.json")
+            with open(pkg_path, "w", encoding="utf-8") as f:
+                f.write('{"name": "test-pkg", "version": "1.0.0"}')
+
+            fresh_orch = ExternalToolOrchestrator(timeout=2.0)
+            findings, status = fresh_orch.run_external_first(tmpdir)
+            self.assertIn("npm_audit", status["attempted"])
+            self.assertIsInstance(status["fallback_needed"], list)
+
+            # Test normalization when mock data is processed
+            mock_npm_data = {
+                "vulnerabilities": {
+                    "vulnerable-dep": {
+                        "severity": "high",
+                        "range": "<2.0.0",
+                        "fixAvailable": True,
+                        "via": [{"title": "Prototype Pollution", "url": "https://cve/CVE-2024-9999"}],
+                    }
+                }
+            }
+            with mock.patch("subprocess.run") as mock_sub:
+                mock_sub.return_value = mock.Mock(stdout=json.dumps(mock_npm_data), returncode=1)
+                norm_findings = fresh_orch._run_npm_audit(tmpdir)
+                self.assertIsNotNone(norm_findings)
+                self.assertEqual(len(norm_findings), 1)
+                self.assertEqual(norm_findings[0].id, "EXT-NPM-AUDIT-VULNERABLE-DEP")
+                self.assertEqual(norm_findings[0].cwe_id, "CWE-1357")
+
+            # Verify AuditEngine runs Stage 0 external tools seamlessly
+            engine = AuditEngine(enable_external_tools=True)
+            report = engine.scan_path(tmpdir)
+            self.assertIn(report.execution_status, ("PASS", "BLOCK"))
+
 
 if __name__ == "__main__":
     unittest.main()
