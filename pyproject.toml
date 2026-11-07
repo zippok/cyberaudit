@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberaudit"
+version = "2.0.0"
+description = "CyberAudit Definitive Security, Architecture, QA and Full-Spectrum Auditor"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "rich>=12.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+cyberaudit = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cyberaudit*"]

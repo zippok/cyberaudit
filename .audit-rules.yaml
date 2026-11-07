@@ -1,0 +1,155 @@
+# ==============================================================================
+# CyberAudit Invariant Contracts (.audit-rules.yaml)
+# Formal, declarative specification of architectural and business invariants.
+# Used by the Call Graph AST engine and Scoped Invariant Verifier.
+# ==============================================================================
+version: "1.0"
+service: "cyberaudit-core"
+language: "python"
+framework: "fastapi"
+
+# ------------------------------------------------------------------------------
+# DYNAMIC PATH POLICY  (Crítica de Auditor #2)
+# Controls CI/CD behavior when dynamic dispatch patterns are detected:
+#   getattr(obj, name)(), handlers[action](), eval(), exec(),
+#   __getattr__ override, functools.wraps-wrapped sinks.
+#
+# strict             → Emit UNVERIFIED_DYNAMIC_PATH violation (exit 1, blocks merge)
+# warn               → Emit LOW/INFO finding in SARIF only  (exit 0, advisory)
+# require_annotation → PASS only if enclosing docstring contains
+#                      the literal "cyberaudit:trust-dynamic"
+# ------------------------------------------------------------------------------
+dynamic_path_policy: "warn"   # Options: strict | warn | require_annotation
+
+invariants:
+  - id: "INV-AUTH-001"
+    name: "Mutaciones de estado requieren guardas de acceso/autorizacion"
+    description: "Cualquier endpoint que cree o elimine proyectos o reportes debe verificar acceso"
+    target: "cyberaudit/web/app.py"
+    entrypoints:
+      - "@app.post"
+      - "@app.delete"
+    contract:
+      required_guards:
+        - "validate_project_access"
+        - "validate_file_path"
+        - "clean_filename"
+      forbidden_sinks:
+        - "os.remove"
+        - "shutil.rmtree"
+    exemptions:
+      - "run_audit"
+      - "save_chat_message"
+      - "execute_poc_endpoint"
+      - "upload_remediation_markdown"
+      - "run_qa_user_simulation_endpoint"
+    severity: "CRITICAL"
+    remediation_category: "auth_decorator"
+
+  - id: "INV-IO-002"
+    name: "Toda lectura o escritura de archivos debe emplear context managers"
+    description: "Prevenir descriptores huerfanos y fugas de recursos garantizando el uso de with open"
+    target: "cyberaudit/core/**/*.py"
+    entrypoints:
+      - "def *"
+    contract:
+      required_guards:
+        - "with open"
+      forbidden_sinks:
+        - "open("
+    exemptions:
+      - "tests/**"
+      - "*_test.py"
+    severity: "HIGH"
+    remediation_category: "resource_leak"
+
+  - id: "INV-INPUT-003"
+    name: "Parametros de ruta y uploads deben sanitizar rutas contra Path Traversal"
+    description: "Toda manipulacion de rutas externas debe usar abspath/normpath y verificar pertenencia al directorio base"
+    target: "cyberaudit/web/app.py"
+    entrypoints:
+      - "@app.post"
+      - "@app.get"
+    contract:
+      required_guards:
+        - "validate_file_path"
+        - "clean_filename"
+        - "os.path.realpath"
+      forbidden_sinks:
+        - "open("
+        - "shutil.copy"
+    exemptions:
+      - "root"
+      - "healthcheck"
+      - "get_knowledge_tree"
+    severity: "HIGH"
+    remediation_category: "input_guard"
+
+  - id: "INV-NULL-004"
+    name: "Propiedades opcionales en reportes requieren guardia contra None"
+    description: "Garantizar que accesos a diccionarios o modelos con atributos opcionales validen presencia previa"
+    target: "cyberaudit/core/**/*.py"
+    entrypoints:
+      - "def *"
+    contract:
+      required_guards:
+        - "if "
+        - ".get("
+      forbidden_sinks:
+        - "AttributeError"
+    severity: "MEDIUM"
+    remediation_category: "null_guard"
+
+  # ==============================================================================
+  # NUEVOS CONTRATOS DE INVARIANTES (Ingenieria de Software & AppSec)
+  # Fuente: Alice & Bob (Janca), Google SE (Winters), DDIA (Kleppmann)
+  # ==============================================================================
+  - id: "INV-EXEC-005"
+    name: "Ejecución Segura de Subprocesos contra Inyección de Comandos (CWE-78)"
+    description: "Prohibir invocaciones shell dinámicas con concatenación de strings. Requerir listas de argumentos seguras y listas blancas (Allow-lists)"
+    target: "cyberaudit/**/*.py"
+    entrypoints:
+      - "def *"
+    contract:
+      required_guards:
+        - "shlex.quote"
+        - "isinstance(*, list)"
+      forbidden_sinks:
+        - "shell=True"
+        - "os.system("
+    severity: "CRITICAL"
+    remediation_category: "command_injection_guard"
+
+  - id: "INV-STORAGE-006"
+    name: "Persistencia Atómica Crash-Safe de Estados Críticos (DDIA Cap. 3 & 11)"
+    description: "Toda escritura de reportes y estado debe ejecutarse de forma atómica (archivo temporal + rename) para prevenir corrupción de archivos JSON"
+    target: "cyberaudit/core/**/*.py"
+    entrypoints:
+      - "def save_*"
+      - "def export_*"
+    contract:
+      required_guards:
+        - "tempfile"
+        - "os.replace"
+        - "os.rename"
+      forbidden_sinks:
+        - "open(..., 'w').write"
+    severity: "HIGH"
+    remediation_category: "atomic_persistence_guard"
+
+  - id: "INV-ASYNC-007"
+    name: "No Bloqueo del Bucle de Eventos en Servicios Web Concurrentes"
+    description: "Prevenir operaciones de I/O síncronas pesadas en el hilo principal de endpoints asíncronos"
+    target: "cyberaudit/web/**/*.py"
+    entrypoints:
+      - "async def *"
+    contract:
+      required_guards:
+        - "asyncio.to_thread"
+        - "await "
+      forbidden_sinks:
+        - "time.sleep("
+        - "requests.get("
+        - "requests.post("
+    severity: "HIGH"
+    remediation_category: "event_loop_blocking_guard"

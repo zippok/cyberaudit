@@ -1,0 +1,17 @@
+# CyberAudit Ephemeral Sandbox Image
+# Minimal Python runtime for isolated test execution
+# Size target: <50MB
+FROM python:3.13-slim
+
+# Install only pytest and yaml (no network access at runtime)
+RUN pip install --no-cache-dir pytest pyyaml \
+    && rm -rf /root/.cache/pip
+
+# Non-root user for defense-in-depth
+RUN useradd -m -s /bin/bash sandboxuser
+USER sandboxuser
+
+WORKDIR /workspace
+
+# Health check: verify pytest is accessible
+RUN python -m pytest --version
