@@ -1,7 +1,7 @@
 # CyberAudit Agent-Driven Onboarding Specification
 
 > **Target Audience:** AI Assistants & Agents (Google Antigravity, Claude Code, Cursor, Copilot, Codex, Windsurf).
-> **Role:** When a user asks you to *"Read this repo and set up CyberAudit for this project"*, follow this protocol strictly.
+> **Role:** When a user asks you to *"Lee este repositorio y configura CyberAudit para este proyecto"* or *"Read this repo and set up CyberAudit for this project"*, follow this protocol strictly. Always conduct the interview and present the plan in the same language the user prompted you with (Spanish or English).
 
 ---
 
