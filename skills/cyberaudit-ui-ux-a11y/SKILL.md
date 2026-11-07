@@ -1,101 +1,130 @@
 ---
 name: cyberaudit-ui-ux-a11y
-description: "Executes all 10 UI/UX, Accessibility & Frontend Performance scanners: WCAG A11y Semantics, Responsive Touch Ergonomics, Color Contrast & Typography, Nielsen UX Heuristics, WCAG 2.2 Modern Compliance (Paste/Focus Obscured), Cognitive Ergonomics, Async UI States (Loading/Error/Empty/Double-Submit), Core Web Vitals (CLS/LCP/INP), Design System Token Drift & i18n, and Client Storage Token Exposure & SSR Hydration Safety. Executes 10 deterministic CyberAudit scanners and emits a verifiable gate artifact and cryptographic sello. Compatible with rsc-harness review/verify disciplines."
-tags: [cyberaudit, ui-ux-a11y, audit, verify, harness, rsc]
+description: "Executes all 10 UI/UX & Accessibility scanners + fresh-context UI/UX Refuter: WCAG 2.2 AA/AAA, Core Web Vitals (CLS image dimensions, INP passive listeners), async loading locks (double-submit prevention), design system token leaks, and client storage hydration safety."
+tags: [cyberaudit, ui-ux, a11y, wcag, audit, verify, harness, rsc, multi-agent]
 recommends: [verify, review, secure-coding, code-review]
-origin: cyberaudit-harness
+origin: risco
 ---
 
-# CyberAudit UI/UX Heuristics, WCAG 2.2 Accessibility & Core Web Vitals Skill (`cyberaudit-ui-ux-a11y`)
+# CyberAudit UI/UX Heuristics, WCAG 2.2 & Core Web Vitals Skill (`cyberaudit-ui-ux-a11y`)
 
-A **machine-first, evidence-first** deterministic audit skill. Point the specialized CyberAudit scanner suite at a codebase, collect SARIF/JSON evidence, dedupe cross-scanner overlap, and emit a reproducible gate artifact and cryptographic seal (`SELLO-CYBERAUDIT-VERIFICADO`).
+Tests prove the code works, not that it does what was asked. Scanners find syntax patterns, not architecture flaws. CyberAudit combines **both forces**: the deterministic 10-scanner machine suite (`cyberaudit harness`) with the **adversarial multi-agent refuter panel** (fresh-context subagents) to refute readiness before anything ships.
 
-**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
+**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. A clean diff/repo gets `APPROVE`, not a manufactured nit. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
 
-## Lane & Execution Contract
+---
 
-- **Default Lane:** `verify`
-- **Deterministic Engine:** CyberAudit Definitive Suite (`10` specialized scanners in this domain; `68` total in `cyberaudit-full`).
-- **Evidence First (P2 / P10):** Never claim a pass without running the deterministic CyberAudit CLI harness and citing the observed `artifact_digest`, `scanners_executed_count`, `verdict`, and `seal_hash`.
-- **Read-only by default:** Scan, triage, gate, and report. Do not silently mutate source files during an audit sweep.
+## The Execution Model — Three Strict Stages
 
-## Normative Standards & Frameworks
+Operate through this three-stage discipline:
 
-- W3C WCAG 2.2 AA/AAA
-- Nielsen Norman 10 Heuristics
-- Google Core Web Vitals (LCP/CLS/INP)
-- Laws of UX
+```text
+[Stage 1: Machine Pre-Flight] -> [Stage 2: Multi-Agent Refuter Panel] -> [Stage 3: Consolidate & Sello]
+```
 
-## The Pass Order & Verification Matrix
+### Stage 1: The Machine Pre-Flight (Deterministic 10 Scanners)
 
-Run these passes systematically. Passes 1–4 are security/correctness critical and are blocking-eligible (`[blocking]`); passes 5–6 address resilience, performance, and ergonomics (`[should-fix]` or `[nit]`). A clean pass is a reportable result ("Pass X: 0 findings, invariant verified").
+Always execute the deterministic CyberAudit CLI harness first. It inspects hundreds of files in sub-second time, collecting exact line-numbered SARIF/JSON evidence without spending LLM tokens on AST/regex patterns:
 
-| # | Pass | The Core Question | Typical Defects Detected |
-|---|------|-------------------|---------------------------|
-| 1 | WCAG 2.2 Modern Accessibility Compliance | Are inputs blocking paste or fixed elements obscuring focus? | Paste blocked on passwords, sticky headers hiding focus ring |
-| 2 | Responsive Ergonomics & Touch Targets | Are tap targets at least 48x48px with no horizontal overflow? | Tiny icons, horizontal scrollbars on 375px mobile viewports |
-| 3 | Color Contrast & Accessible Typography | Does text meet 4.5:1 (normal) or 3:1 (large) contrast ratios? | Low-contrast light gray text on white, hardcoded hex colors |
-| 4 | Async UI States & Double-Submit Protection | Do forms handle loading, error, empty, and double-submit states? | Missing disabled button on submit, blocking window.alert() |
-| 5 | Core Web Vitals (CLS, LCP, INP) | Are images dimensionless causing layout shifts or scroll listeners un-passive? | <img> without width/height, non-passive scroll listeners causing jank |
-| 6 | Client Storage & SSR Hydration Safety | Are sensitive tokens stored in localStorage or non-deterministic SSR values rendered? | JWT in localStorage, Math.random() in SSR JSX causing hydration mismatch |
+```bash
+cyberaudit harness run-skill cyberaudit-ui-ux-a11y "$TARGET" --threshold HIGH
+```
+
+Inspect the output:
+- `artifact_digest`: SHA-256 hash of the scanned tree state.
+- `blocking_findings_count`: Count of findings with severity >= threshold.
+- `verdict`: `PASS` or `BLOCKED`.
+
+### Stage 2: Depth by Risk & Multi-Agent Refuter Panel
+
+Determine review depth using `cyberaudit harness risk "$TARGET"`:
+- **Tier 0 (docs, copy, markdown):** Silent pass; no subagents.
+- **Tier 1 (minor non-critical changes):** Spawn **one fresh-context reviewer** via `invoke_subagent`.
+- **Tier 2 / Full Audit (security, auth, DB, payments, public APIs, release gates):** Spawn the **adversarial fresh-context refuter panel** using `invoke_subagent`.
+
+Each subagent is told to **REFUTE** readiness, not confirm it. Fresh context is non-negotiable: a reviewer that shares the implementation conversation inherits its blind spots.
+
+#### Active Refuters for `cyberaudit-ui-ux-a11y`:
+- **`CyberAudit UI/UX Refuter`** (`TypeName: "research"`): Attacks WCAG 2.2 accessibility gaps, layout shifts (CLS), scroll lag (INP), async double-submit button locks, and arbitrary z-index escalations.
+
+
+```json
+// Subagent: CyberAudit UI/UX Refuter
+{
+  "TypeName": "research",
+  "Role": "CyberAudit UI/UX Refuter",
+  "Prompt": "You are an adversarial CyberAudit UI/UX Refuter with fresh context. Attack this target: Attacks WCAG 2.2 accessibility gaps, layout shifts (CLS), scroll lag (INP), async double-submit button locks, and arbitrary z-index escalations. Trace values, verify reachability, and report only reproducible findings using the standard where / why / repro / fix format."
+}
+```
+
+
+**Give each refuter exactly four inputs — no more, no less:**
+1. **The task contract or project intent:** The human request and approved requirements.
+2. **The exact source state:** `git diff` or changed files list.
+3. **The baseline CyberAudit machine evidence:** The SARIF findings emitted in Stage 1.
+4. **The test/run entrypoint:** The one command to run checks (`npm test`, `pytest`, `verify.sh`).
+
+**Blind first, compare second:** Each refuter attacks and records findings before seeing the others' conclusions. Skip this and the fresh context is spent confirming previous bias.
+
+### Stage 3: Consolidate Findings, Apply the 80% Floor & Emit the Sello
+
+1. **Merge & Dedupe:** Combine machine scanner findings with subagent refuter attacks.
+2. **Apply the 80% Confidence Floor:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+3. **Emit the Sello:**
+   ```bash
+   cyberaudit harness sello "$TARGET" --skill cyberaudit-ui-ux-a11y --threshold HIGH
+   ```
+   Records the immutable SHA-256 seal in `.rsc/cyberaudit-sello-log.jsonl`.
+
+---
 
 ## Confidence Floor & False-Positive Skip-List
 
-**The 80% Rule:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+Skip these common false positives outright (or demote to `[question]` / `[nit]`):
 
-Skip these common false positives outright:
+- **Guarded upstream:** The check occurs two functions up or in a router middleware; trace before you flag.
+- **Framework-enforced:** Framework already sanitizes (e.g. Prisma prepared statements, Zod schema validation).
+- **Test-only or generated code held to production standards:** Don't demand production-grade error handling in mock fixtures.
+- **Behind an off-everywhere flag:** Real flaw but unreachable in deployed environments -> `[nit]`, not `[blocking]`.
+- **Style owned by the linter:** Quotes, line breaks, formatting. If an automated linter owns it, do not spend a finding on it.
 
-- **Hidden or decorative elements with aria-hidden='true'.** — Hidden or decorative elements with aria-hidden='true'.
-- **Desktop-only administration tables with intentional horizontal table scrolling.** — Desktop-only administration tables with intentional horizontal table scrolling.
-- **Ephemeral UI animations that do not shift layout or block the main thread.** — Ephemeral UI animations that do not shift layout or block the main thread.
+---
 
-## Scanners Executed by `cyberaudit-ui-ux-a11y` (10 modules)
+## Severity & Finding Format
 
-- **`AccessibilityA11yScanner`** (*UI/UX Accessibility & WCAG Standards Scanner*): Audits markup and UI components for compliance with WCAG 2.1/2.2 accessibility, screen readers, and keyboard navigation.
-- **`ResponsiveErgonomicsScanner`** (*UI/UX Responsive Layout & Touch Ergonomics Scanner*): Evaluates responsive viewport configurations, fluid reflow constraints, and touch target sizing.
-- **`ContrastTypographyScanner`** (*UI/UX Color Contrast & Typography Usability Scanner*): Audits text-to-background contrast ratios, minimum font size thresholds, and anti-selection usability issues.
-- **`UxAdvancedHeuristicsScanner`** (*Advanced UX Heuristics & Form Accessibility Scanner*): Audits focus visibility (killed outlines), duplicate DOM IDs, missing autocomplete semantics, and vestibular motion preferences.
-- **`Wcag22ModernComplianceScanner`** (*WCAG 2.2 Modern Compliance & Assistive Tech Scanner*): Audits WCAG 2.2 criteria (paste prevention, focus obscuring), decorative SVG pollution, and placeholder label misuse.
-- **`CognitiveErgonomicsScanner`** (*Cognitive Ergonomics & Usability Heuristics Scanner*): Audits Nielsen usability heuristics (unconfirmed destructive actions, error prevention), color-only status indicators, and dark mode contrast safety.
-- **`AsyncUiStatesCompletenessScanner`** (*Async UI States Completeness Scanner (Loading/Error/Empty/Double-Submit)*): Audits frontend components for missing disabled/loading submit locks (double-submit bug), blocking browser alert() dialogs, and silent async catch blocks lacking UI error state.
-- **`CoreWebVitalsAndFrontendPerfScanner`** (*Core Web Vitals (LCP, CLS, INP) & Frontend Performance Scanner*): Audits frontend templates and scripts for Cumulative Layout Shift (dimensionless <img>), non-passive scroll/touch listeners (INP jank), and render-blocking head scripts (LCP).
-- **`DesignSystemTokenAndI18nScanner`** (*Design System Token Drift & i18n Ergonomics Scanner*): Detects magic z-index escalation (z-index >= 9999), inline hardcoded hex colors bypassing design tokens, and locale-naive currency formatting.
-- **`ClientStorageAndHydrationSafetyScanner`** (*Client Storage Token Exposure & SSR Hydration Scanner*): Detects sensitive JWT/auth tokens or PII persisted in localStorage/sessionStorage and non-deterministic SSR hydration patterns.
+Every finding carries **where / why / repro / fix**:
 
-## Deterministic Execution Recipes
-
-### 1. Run Domain Skill Audit
-
-```bash
-python cyberaudit/cli.py harness run-skill cyberaudit-ui-ux-a11y . --threshold HIGH --json reports/cyberaudit-ui-ux-a11y-report.json
-```
-
-### 2. Emit Cryptographic Verification Seal (`SELLO-CYBERAUDIT-VERIFICADO`)
-
-```bash
-python cyberaudit/cli.py harness sello . --skill cyberaudit-ui-ux-a11y --threshold HIGH
-```
-
-### 3. Evaluate Risk Tier & Recommended Skills
-
-```bash
-python cyberaudit/cli.py harness risk .
-```
-
-## Standard Finding Format
-
-Every finding reported must carry **where / why / repro / fix**:
+- `[blocking]` — Ships a vulnerability, data loss, invariant breach, or broken contract. Release blocker.
+- `[should-fix]` — Real defect with bounded blast radius; fix now or track explicitly.
+- `[nit]` — Minor code quality or stylistic issue with zero correctness or security impact.
+- `[question]` — Suspected defect where reachability cannot be proven from the diff alone.
 
 ```text
-[blocking] cyberaudit-ui-ux-a11y:<file_path>:<line_number> — <finding_title>
-  where:  Exact file, line number, and code snippet.
-  why:    Invariant, CWE ID, or compliance control violated (e.g., DDIA Cap. 3, OWASP A03).
-  repro:  Exact attack vector, malformed input payload, or stress condition that triggers the flaw.
-  fix:    Concrete defensive remediation (exact code patch or architectural pattern).
+[blocking] src/repository/userRepo.js:42 — unvalidated SQL string concatenation
+  where:  db.query(`SELECT * FROM users WHERE id = '${userId}'`) at line 42
+  why:    userId comes from unvalidated req.params.id; permits SQL injection (CWE-89)
+  repro:  GET /users/'%20OR%201=1-- -> dumps the entire user table
+  fix:    db.query('SELECT * FROM users WHERE id = $1', [userId])
 ```
 
-## Gate Rules
+**Rule: no repro or stated mechanism -> it is a `[question]`, not a blocker.**
 
-1. **Verdict `PASS`:** `execution_status == "PASS"` and `0` open findings at or above the configured `--threshold` (default `HIGH`).
-2. **Verdict `BLOCK`:** Any open finding at or above `--threshold` blocks release certification until remediated or documented with a time-boxed waiver.
-3. **Cryptographic Trail:** Every seal is appended to `.rsc/cyberaudit-sello-log.jsonl` with commit SHA, branch, `artifact_digest`, and `seal_hash`.
+---
+
+## The Verdict
+
+End every audit review with exactly one verdict:
+
+- **`APPROVE`** — Zero blockers, zero unresolved should-fix. Point the user to `ship`.
+- **`APPROVE WITH NITS`** — Mergeable; nits listed but none block delivery.
+- **`CHANGES REQUESTED`** — At least one `[blocking]`. List precisely what unblocks it.
+
+---
+
+## Verification Script
+
+Run the deterministic pre-commit verification gate:
+
+```bash
+bash .antigravity/rsc/cyberaudit-ui-ux-a11y/scripts/verify.sh "$TARGET" HIGH
+```

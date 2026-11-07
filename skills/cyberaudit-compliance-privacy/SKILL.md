@@ -1,98 +1,130 @@
 ---
 name: cyberaudit-compliance-privacy
-description: "Audits GDPR PII data-flows, plaintext PII logging, cookie consent dark patterns, cryptographic hygiene, SBOM provenance, SDD/FTD governance, and Production Readiness Certification gates. Executes 7 deterministic CyberAudit scanners and emits a verifiable gate artifact and cryptographic sello. Compatible with rsc-harness review/verify disciplines."
-tags: [cyberaudit, compliance-privacy, audit, verify, harness, rsc]
+description: "Executes all 7 Compliance & Privacy scanners + fresh-context Compliance Refuter: Plaintext PII logging (GDPR Art. 5/32), cookie consent symmetric reject-all (EDPB dark patterns), ROPA Art. 30, SOC 2 / ISO 27001 controls, and production readiness certification."
+tags: [cyberaudit, compliance, privacy, gdpr, soc2, audit, verify, harness, rsc, multi-agent]
 recommends: [verify, review, secure-coding, code-review]
-origin: cyberaudit-harness
+origin: risco
 ---
 
-# CyberAudit GDPR Privacy, SOC 2, ISO 27001 & Production Release Certification Skill (`cyberaudit-compliance-privacy`)
+# CyberAudit GDPR Privacy, SOC 2 & Release Certification Skill (`cyberaudit-compliance-privacy`)
 
-A **machine-first, evidence-first** deterministic audit skill. Point the specialized CyberAudit scanner suite at a codebase, collect SARIF/JSON evidence, dedupe cross-scanner overlap, and emit a reproducible gate artifact and cryptographic seal (`SELLO-CYBERAUDIT-VERIFICADO`).
+Tests prove the code works, not that it does what was asked. Scanners find syntax patterns, not architecture flaws. CyberAudit combines **both forces**: the deterministic 7-scanner machine suite (`cyberaudit harness`) with the **adversarial multi-agent refuter panel** (fresh-context subagents) to refute readiness before anything ships.
 
-**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
+**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. A clean diff/repo gets `APPROVE`, not a manufactured nit. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
 
-## Lane & Execution Contract
+---
 
-- **Default Lane:** `verify`
-- **Deterministic Engine:** CyberAudit Definitive Suite (`7` specialized scanners in this domain; `68` total in `cyberaudit-full`).
-- **Evidence First (P2 / P10):** Never claim a pass without running the deterministic CyberAudit CLI harness and citing the observed `artifact_digest`, `scanners_executed_count`, `verdict`, and `seal_hash`.
-- **Read-only by default:** Scan, triage, gate, and report. Do not silently mutate source files during an audit sweep.
+## The Execution Model — Three Strict Stages
 
-## Normative Standards & Frameworks
+Operate through this three-stage discipline:
 
-- GDPR (EU 2016/679)
-- SOC 2 Type II
-- ISO/IEC 27001:2022
-- PCI-DSS v4.0
-- ENS
+```text
+[Stage 1: Machine Pre-Flight] -> [Stage 2: Multi-Agent Refuter Panel] -> [Stage 3: Consolidate & Sello]
+```
 
-## The Pass Order & Verification Matrix
+### Stage 1: The Machine Pre-Flight (Deterministic 7 Scanners)
 
-Run these passes systematically. Passes 1–4 are security/correctness critical and are blocking-eligible (`[blocking]`); passes 5–6 address resilience, performance, and ergonomics (`[should-fix]` or `[nit]`). A clean pass is a reportable result ("Pass X: 0 findings, invariant verified").
+Always execute the deterministic CyberAudit CLI harness first. It inspects hundreds of files in sub-second time, collecting exact line-numbered SARIF/JSON evidence without spending LLM tokens on AST/regex patterns:
 
-| # | Pass | The Core Question | Typical Defects Detected |
-|---|------|-------------------|---------------------------|
-| 1 | Intent Fidelity | Does the system behavior match the stated security/quality contract? | Scope creep, incomplete implementation |
-| 2 | Vulnerability & Threat Modeling | Are there exploitable flaws against OWASP/CWE/NIST standards? | Injection, auth bypass, leak |
-| 3 | Durability & Resilience | Does the system maintain stability under faults and high load? | Resource exhaustion, unhandled exceptions |
-| 4 | Standards Compliance | Are regulatory and framework controls satisfied? | GDPR, SOC 2, ISO 27001, WCAG |
-| 5 | Evidence & Verification | Is every claim supported by reproducible tool execution? | Missing command, missing digest |
+```bash
+cyberaudit harness run-skill cyberaudit-compliance-privacy "$TARGET" --threshold HIGH
+```
+
+Inspect the output:
+- `artifact_digest`: SHA-256 hash of the scanned tree state.
+- `blocking_findings_count`: Count of findings with severity >= threshold.
+- `verdict`: `PASS` or `BLOCKED`.
+
+### Stage 2: Depth by Risk & Multi-Agent Refuter Panel
+
+Determine review depth using `cyberaudit harness risk "$TARGET"`:
+- **Tier 0 (docs, copy, markdown):** Silent pass; no subagents.
+- **Tier 1 (minor non-critical changes):** Spawn **one fresh-context reviewer** via `invoke_subagent`.
+- **Tier 2 / Full Audit (security, auth, DB, payments, public APIs, release gates):** Spawn the **adversarial fresh-context refuter panel** using `invoke_subagent`.
+
+Each subagent is told to **REFUTE** readiness, not confirm it. Fresh context is non-negotiable: a reviewer that shares the implementation conversation inherits its blind spots.
+
+#### Active Refuters for `cyberaudit-compliance-privacy`:
+- **`CyberAudit Compliance & Privacy Refuter`** (`TypeName: "research"`): Attacks plaintext PII logging, cookie dark patterns (missing Reject All button), missing audit logs, and unverified release gates.
+
+
+```json
+// Subagent: CyberAudit Compliance & Privacy Refuter
+{
+  "TypeName": "research",
+  "Role": "CyberAudit Compliance & Privacy Refuter",
+  "Prompt": "You are an adversarial CyberAudit Compliance & Privacy Refuter with fresh context. Attack this target: Attacks plaintext PII logging, cookie dark patterns (missing Reject All button), missing audit logs, and unverified release gates. Trace values, verify reachability, and report only reproducible findings using the standard where / why / repro / fix format."
+}
+```
+
+
+**Give each refuter exactly four inputs — no more, no less:**
+1. **The task contract or project intent:** The human request and approved requirements.
+2. **The exact source state:** `git diff` or changed files list.
+3. **The baseline CyberAudit machine evidence:** The SARIF findings emitted in Stage 1.
+4. **The test/run entrypoint:** The one command to run checks (`npm test`, `pytest`, `verify.sh`).
+
+**Blind first, compare second:** Each refuter attacks and records findings before seeing the others' conclusions. Skip this and the fresh context is spent confirming previous bias.
+
+### Stage 3: Consolidate Findings, Apply the 80% Floor & Emit the Sello
+
+1. **Merge & Dedupe:** Combine machine scanner findings with subagent refuter attacks.
+2. **Apply the 80% Confidence Floor:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+3. **Emit the Sello:**
+   ```bash
+   cyberaudit harness sello "$TARGET" --skill cyberaudit-compliance-privacy --threshold HIGH
+   ```
+   Records the immutable SHA-256 seal in `.rsc/cyberaudit-sello-log.jsonl`.
+
+---
 
 ## Confidence Floor & False-Positive Skip-List
 
-**The 80% Rule:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+Skip these common false positives outright (or demote to `[question]` / `[nit]`):
 
-Skip these common false positives outright:
+- **Guarded upstream:** The check occurs two functions up or in a router middleware; trace before you flag.
+- **Framework-enforced:** Framework already sanitizes (e.g. Prisma prepared statements, Zod schema validation).
+- **Test-only or generated code held to production standards:** Don't demand production-grade error handling in mock fixtures.
+- **Behind an off-everywhere flag:** Real flaw but unreachable in deployed environments -> `[nit]`, not `[blocking]`.
+- **Style owned by the linter:** Quotes, line breaks, formatting. If an automated linter owns it, do not spend a finding on it.
 
-- **Findings guarded upstream by framework-enforced parameterization.** — Findings guarded upstream by framework-enforced parameterization.
-- **Internal development fixtures and test files with no production reachability.** — Internal development fixtures and test files with no production reachability.
-- **Formatting or stylistic nitpicks owned by the linter.** — Formatting or stylistic nitpicks owned by the linter.
+---
 
-## Scanners Executed by `cyberaudit-compliance-privacy` (7 modules)
+## Severity & Finding Format
 
-- **`LogHygieneScanner`** (*Logging Hygiene & Leakage Scanner*): Audits application source code for credential leakage in logs and missing security telemetry.
-- **`CryptoFailuresScanner`** (*Cryptographic Failures Scanner*): Detects broken hash algorithms (MD5/SHA-1), insecure block cipher modes (ECB), predictable PRNGs, and hardcoded keys.
-- **`SecretsScanner`** (*Secrets & Credential Scanner*): Scans code and configuration files for exposed cloud keys (AWS, GitHub, OpenAI), private keys, and passwords.
-- **`CryptoPqcAgilityScanner`** (*Cryptographic Agility & Post-Quantum (PQC) Readiness Scanner*): Audits applications for obsolete ciphers (DES/RC4), weak digests (MD5/SHA1), static IVs, insufficient RSA key lengths, and evaluates PQC transition posture.
-- **`SupplyChainSbomScanner`** (*Software Supply Chain & SBOM Security Scanner*): Detects supply chain threats including malicious npm/pip lifecycle scripts, unpinned dependencies, unpinned GitHub Actions, and unencrypted repository endpoints according to SLSA Framework and CISA guidance.
-- **`RscHarnessGovernanceScanner`** (*RSC-Harness & Agentic SDD/FTD Governance Scanner*): Audits rsc-harness project memory (02-DOCS/), tool connections (01-TOOLS/), SDD constitution status, verification gates (P2/P10), and installed audit skills.
-- **`GdprPrivacyAndPiiDataFlowScanner`** (*GDPR Privacy, PII Data-Flow & Consent Scanner*): Audits source code for plaintext PII logging (GDPR Art. 5/32), unredacted PII data flows, and asymmetric cookie consent banners lacking a Reject-All action (GDPR Art. 7).
+Every finding carries **where / why / repro / fix**:
 
-## Deterministic Execution Recipes
-
-### 1. Run Domain Skill Audit
-
-```bash
-python cyberaudit/cli.py harness run-skill cyberaudit-compliance-privacy . --threshold HIGH --json reports/cyberaudit-compliance-privacy-report.json
-```
-
-### 2. Emit Cryptographic Verification Seal (`SELLO-CYBERAUDIT-VERIFICADO`)
-
-```bash
-python cyberaudit/cli.py harness sello . --skill cyberaudit-compliance-privacy --threshold HIGH
-```
-
-### 3. Evaluate Risk Tier & Recommended Skills
-
-```bash
-python cyberaudit/cli.py harness risk .
-```
-
-## Standard Finding Format
-
-Every finding reported must carry **where / why / repro / fix**:
+- `[blocking]` — Ships a vulnerability, data loss, invariant breach, or broken contract. Release blocker.
+- `[should-fix]` — Real defect with bounded blast radius; fix now or track explicitly.
+- `[nit]` — Minor code quality or stylistic issue with zero correctness or security impact.
+- `[question]` — Suspected defect where reachability cannot be proven from the diff alone.
 
 ```text
-[blocking] cyberaudit-compliance-privacy:<file_path>:<line_number> — <finding_title>
-  where:  Exact file, line number, and code snippet.
-  why:    Invariant, CWE ID, or compliance control violated (e.g., DDIA Cap. 3, OWASP A03).
-  repro:  Exact attack vector, malformed input payload, or stress condition that triggers the flaw.
-  fix:    Concrete defensive remediation (exact code patch or architectural pattern).
+[blocking] src/repository/userRepo.js:42 — unvalidated SQL string concatenation
+  where:  db.query(`SELECT * FROM users WHERE id = '${userId}'`) at line 42
+  why:    userId comes from unvalidated req.params.id; permits SQL injection (CWE-89)
+  repro:  GET /users/'%20OR%201=1-- -> dumps the entire user table
+  fix:    db.query('SELECT * FROM users WHERE id = $1', [userId])
 ```
 
-## Gate Rules
+**Rule: no repro or stated mechanism -> it is a `[question]`, not a blocker.**
 
-1. **Verdict `PASS`:** `execution_status == "PASS"` and `0` open findings at or above the configured `--threshold` (default `HIGH`).
-2. **Verdict `BLOCK`:** Any open finding at or above `--threshold` blocks release certification until remediated or documented with a time-boxed waiver.
-3. **Cryptographic Trail:** Every seal is appended to `.rsc/cyberaudit-sello-log.jsonl` with commit SHA, branch, `artifact_digest`, and `seal_hash`.
+---
+
+## The Verdict
+
+End every audit review with exactly one verdict:
+
+- **`APPROVE`** — Zero blockers, zero unresolved should-fix. Point the user to `ship`.
+- **`APPROVE WITH NITS`** — Mergeable; nits listed but none block delivery.
+- **`CHANGES REQUESTED`** — At least one `[blocking]`. List precisely what unblocks it.
+
+---
+
+## Verification Script
+
+Run the deterministic pre-commit verification gate:
+
+```bash
+bash .antigravity/rsc/cyberaudit-compliance-privacy/scripts/verify.sh "$TARGET" HIGH
+```

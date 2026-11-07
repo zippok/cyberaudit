@@ -1,108 +1,130 @@
 ---
 name: cyberaudit-qa-resilience
-description: "Executes all 17 Software QA, Code Quality & Resilience scanners: Code Quality, Resource Leaks, Test Coverage, Concurrency & Race Conditions, Cyclomatic Complexity, Resilience & Event-Loop Non-Blocking, Clean Code (Fowler/McConnell), Flaky Test Lifecycle, Defensive Contracts, DB Pool Exhaustion, OpenAPI Breaking Changes, Event Listener Leaks, Type Safety & Schema Boundaries, Test Quality Anti-Theater Auditor, DDIA Crash-Safety Atomic Writes, Algorithmic Complexity O(N^2)/ReDoS Profiler, and SRE Observability & Error Context. Executes 17 deterministic CyberAudit scanners and emits a verifiable gate artifact and cryptographic sello. Compatible with rsc-harness review/verify disciplines."
-tags: [cyberaudit, qa-resilience, audit, verify, harness, rsc]
+description: "Executes all 17 QA, Clean Code & Resilience scanners + fresh-context QA Refuter: Anti-theater testing (tautological assertions, empty tests, committed .only), ReDoS algorithmic complexity, crash-safety durability (atomic state writes), type safety suppression, and observability causal tracking."
+tags: [cyberaudit, qa, resilience, testing, audit, verify, harness, rsc, multi-agent]
 recommends: [verify, review, secure-coding, code-review]
-origin: cyberaudit-harness
+origin: risco
 ---
 
-# CyberAudit QA, Clean Code, Anti-Theater Testing & DDIA Crash-Safety Skill (`cyberaudit-qa-resilience`)
+# CyberAudit QA, Resilience & Anti-Theater Testing Skill (`cyberaudit-qa-resilience`)
 
-A **machine-first, evidence-first** deterministic audit skill. Point the specialized CyberAudit scanner suite at a codebase, collect SARIF/JSON evidence, dedupe cross-scanner overlap, and emit a reproducible gate artifact and cryptographic seal (`SELLO-CYBERAUDIT-VERIFICADO`).
+Tests prove the code works, not that it does what was asked. Scanners find syntax patterns, not architecture flaws. CyberAudit combines **both forces**: the deterministic 17-scanner machine suite (`cyberaudit harness`) with the **adversarial multi-agent refuter panel** (fresh-context subagents) to refute readiness before anything ships.
 
-**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
+**The north star is signal-to-noise.** Report only findings you can defend with concrete line numbers, exact code snippets, and reproducible failure scenarios. A clean diff/repo gets `APPROVE`, not a manufactured nit. High false-positive rates destroy trust; aim for verified findings with zero speculative padding.
 
-## Lane & Execution Contract
+---
 
-- **Default Lane:** `verify`
-- **Deterministic Engine:** CyberAudit Definitive Suite (`17` specialized scanners in this domain; `68` total in `cyberaudit-full`).
-- **Evidence First (P2 / P10):** Never claim a pass without running the deterministic CyberAudit CLI harness and citing the observed `artifact_digest`, `scanners_executed_count`, `verdict`, and `seal_hash`.
-- **Read-only by default:** Scan, triage, gate, and report. Do not silently mutate source files during an audit sweep.
+## The Execution Model — Three Strict Stages
 
-## Normative Standards & Frameworks
+Operate through this three-stage discipline:
 
-- Dave Farley Continuous Delivery
-- Martin Fowler Refactoring
-- Steve McConnell Code Complete
-- Kleppmann DDIA
+```text
+[Stage 1: Machine Pre-Flight] -> [Stage 2: Multi-Agent Refuter Panel] -> [Stage 3: Consolidate & Sello]
+```
 
-## The Pass Order & Verification Matrix
+### Stage 1: The Machine Pre-Flight (Deterministic 17 Scanners)
 
-Run these passes systematically. Passes 1–4 are security/correctness critical and are blocking-eligible (`[blocking]`); passes 5–6 address resilience, performance, and ergonomics (`[should-fix]` or `[nit]`). A clean pass is a reportable result ("Pass X: 0 findings, invariant verified").
+Always execute the deterministic CyberAudit CLI harness first. It inspects hundreds of files in sub-second time, collecting exact line-numbered SARIF/JSON evidence without spending LLM tokens on AST/regex patterns:
 
-| # | Pass | The Core Question | Typical Defects Detected |
-|---|------|-------------------|---------------------------|
-| 1 | Event Loop Non-Blocking & Resource Leaks | Does any synchronous I/O or unbounded loop freeze the runtime? | fs.readFileSync in requests, unclosed db connections, timer leaks |
-| 2 | Concurrency & Race Conditions | Are async shared state mutations atomic and protected? | TOCTOU, dirty writes, lost updates, uncoordinated shared state |
-| 3 | DDIA Crash-Safety & Atomic Writes | Can a crash or power cut leave state files corrupted or 0 bytes? | Missing write-temp + fsync + rename on state/config files |
-| 4 | Type Safety & Boundary Schema Validation | Are compiler checks bypassed or req.body consumed unvalidated? | @ts-ignore, : any abuse, route handlers reading req.body without Zod/Joi |
-| 5 | Test Quality & Anti-Theater Integrity | Do the tests actually prove system behavior or are they theater? | Tautological expect(true).toBe(true), assertion-free tests, .only committed |
-| 6 | Algorithmic Complexity & ReDoS | Are there nested O(N^2) searches or catastrophic regular expressions? | Linear .includes inside .map, nested repeating quantifiers (X+)+ |
+```bash
+cyberaudit harness run-skill cyberaudit-qa-resilience "$TARGET" --threshold HIGH
+```
+
+Inspect the output:
+- `artifact_digest`: SHA-256 hash of the scanned tree state.
+- `blocking_findings_count`: Count of findings with severity >= threshold.
+- `verdict`: `PASS` or `BLOCKED`.
+
+### Stage 2: Depth by Risk & Multi-Agent Refuter Panel
+
+Determine review depth using `cyberaudit harness risk "$TARGET"`:
+- **Tier 0 (docs, copy, markdown):** Silent pass; no subagents.
+- **Tier 1 (minor non-critical changes):** Spawn **one fresh-context reviewer** via `invoke_subagent`.
+- **Tier 2 / Full Audit (security, auth, DB, payments, public APIs, release gates):** Spawn the **adversarial fresh-context refuter panel** using `invoke_subagent`.
+
+Each subagent is told to **REFUTE** readiness, not confirm it. Fresh context is non-negotiable: a reviewer that shares the implementation conversation inherits its blind spots.
+
+#### Active Refuters for `cyberaudit-qa-resilience`:
+- **`CyberAudit QA & Resilience Refuter`** (`TypeName: "research"`): Attacks anti-theater tests, tautological assertions, assert-free mocks, ReDoS regexes, non-atomic state overwrites, and swallowed error causal drops.
+
+
+```json
+// Subagent: CyberAudit QA & Resilience Refuter
+{
+  "TypeName": "research",
+  "Role": "CyberAudit QA & Resilience Refuter",
+  "Prompt": "You are an adversarial CyberAudit QA & Resilience Refuter with fresh context. Attack this target: Attacks anti-theater tests, tautological assertions, assert-free mocks, ReDoS regexes, non-atomic state overwrites, and swallowed error causal drops. Trace values, verify reachability, and report only reproducible findings using the standard where / why / repro / fix format."
+}
+```
+
+
+**Give each refuter exactly four inputs — no more, no less:**
+1. **The task contract or project intent:** The human request and approved requirements.
+2. **The exact source state:** `git diff` or changed files list.
+3. **The baseline CyberAudit machine evidence:** The SARIF findings emitted in Stage 1.
+4. **The test/run entrypoint:** The one command to run checks (`npm test`, `pytest`, `verify.sh`).
+
+**Blind first, compare second:** Each refuter attacks and records findings before seeing the others' conclusions. Skip this and the fresh context is spent confirming previous bias.
+
+### Stage 3: Consolidate Findings, Apply the 80% Floor & Emit the Sello
+
+1. **Merge & Dedupe:** Combine machine scanner findings with subagent refuter attacks.
+2. **Apply the 80% Confidence Floor:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+3. **Emit the Sello:**
+   ```bash
+   cyberaudit harness sello "$TARGET" --skill cyberaudit-qa-resilience --threshold HIGH
+   ```
+   Records the immutable SHA-256 seal in `.rsc/cyberaudit-sello-log.jsonl`.
+
+---
 
 ## Confidence Floor & False-Positive Skip-List
 
-**The 80% Rule:** If you are not at least ~80% confident that a finding is reachable, exposed to untrusted input, or causing real harm, do not elevate it to a blocker. Demote to `[question]` or discard it.
+Skip these common false positives outright (or demote to `[question]` / `[nit]`):
 
-Skip these common false positives outright:
+- **Guarded upstream:** The check occurs two functions up or in a router middleware; trace before you flag.
+- **Framework-enforced:** Framework already sanitizes (e.g. Prisma prepared statements, Zod schema validation).
+- **Test-only or generated code held to production standards:** Don't demand production-grade error handling in mock fixtures.
+- **Behind an off-everywhere flag:** Real flaw but unreachable in deployed environments -> `[nit]`, not `[blocking]`.
+- **Style owned by the linter:** Quotes, line breaks, formatting. If an automated linter owns it, do not spend a finding on it.
 
-- **Synchronous file operations inside build scripts, CLI entrypoints, or test runners.** — Synchronous file operations inside build scripts, CLI entrypoints, or test runners.
-- **Test fixtures or mocks intentionally simulating broken states.** — Test fixtures or mocks intentionally simulating broken states.
-- **Simple regexes with fixed length bounds where backtracking cannot occur.** — Simple regexes with fixed length bounds where backtracking cannot occur.
+---
 
-## Scanners Executed by `cyberaudit-qa-resilience` (17 modules)
+## Severity & Finding Format
 
-- **`CodeQualityScanner`** (*Software QA & Code Quality Scanner*): Evaluates code maintainability, error suppression, network call resilience, and excessive cyclomatic complexity.
-- **`ResourceLeakScanner`** (*Resource & Memory Leak Scanner*): Detects unclosed file handles, orphaned timers, database connection leaks, and Electron IPC listener compounding.
-- **`TestCoverageAuditor`** (*Test Coverage & Test Suite Auditor*): Audits unit test presence, asserts validity, and flags empty or assertion-free tests.
-- **`ConcurrencyRaceScanner`** (*Concurrency & Race Condition Scanner*): Detects asynchronous race conditions, shared global state mutations, and TOCTOU file access patterns.
-- **`ComplexityMaintainabilityScanner`** (*Complexity & Maintainability Scanner*): Audits cyclomatic complexity, cognitive nesting depth, god functions, and technical debt anti-patterns.
-- **`ResiliencePerformanceScanner`** (*Resilience & Performance Scanner*): Audits runtime resilience, event loop blocking I/O, unhandled promise rejections, and missing timeout bounds.
-- **`CleanCodeBestPracticesScanner`** (*Clean Code, Anti-Hardcoding & Best Practices Scanner*): Audits source code for hardcoded local paths and IPs (12-Factor App), leftover debugging logs (console.log, print), debugger traps, nested ternaries, and technical debt tags.
-- **`FlakyTestLifecycleScanner`** (*Flaky Test, Mutation Quality & Lifecycle Memory Scanner*): Audits test flakiness (arbitrary sleeps, unmocked system clocks), placebo assertions, and reactive hook memory leaks.
-- **`DefensiveContractScanner`** (*Defensive Programming & API Contract Scanner*): Audits exception hygiene (stack trace preservation), API boundary contract schemas, and defensive logging diagnostics.
-- **`DatabasePoolExhaustionScanner`** (*DatabasePoolExhaustionScanner*): Detecta fugas de descriptores de sockets, transacciones huérfanas y agotamiento de pools de base de datos.
-- **`OpenApiBreakingChangesScanner`** (*OpenApiBreakingChangesScanner*): Detecta cambios rompientes de API, parámetros obligatorios sin default y ausencia de modelos de error.
-- **`EventListenerLeakScanner`** (*EventListenerLeakScanner*): Detecta fugas de memoria por suscripciones a sockets, EventEmitter y DOM listeners no desuscritos.
-- **`TypeSafetyAndSchemaBoundaryScanner`** (*Type Safety & Schema Boundary Validation Scanner*): Detects TypeScript type-safety bypasses (@ts-ignore, @ts-nocheck, excessive `any`) and HTTP route handlers consuming req.body without schema validation.
-- **`TestQualityAndAssertionAuditor`** (*Test Quality, Anti-Theater & Assertion Auditor*): Audits test suites for tautological assertions (expect(true).toBe(true)), assertion-free theater tests, and left-over .only/.skip modifiers.
-- **`CrashSafetyAndDurabilityScanner`** (*Crash-Safety, Atomic Persistence & Durability Scanner (DDIA)*): Audits state persistence for non-atomic file writes (corruptible on power/process crash) and outbound network requests lacking timeout/abort guards.
-- **`AlgorithmicComplexityAndRedosScanner`** (*Algorithmic Complexity O(N^2) & ReDoS Static Profiler*): Detects catastrophic backtracking regexes (ReDoS), O(N^2) nested collection lookups, and unbounded module-scope in-memory caches.
-- **`ObservabilityAndStructuredLoggingScanner`** (*Observability, SRE Telemetry & Error Context Scanner*): Detects error handlers that discard stack traces (logging only err.message) or swallow causal exception chains without structured context.
+Every finding carries **where / why / repro / fix**:
 
-## Deterministic Execution Recipes
-
-### 1. Run Domain Skill Audit
-
-```bash
-python cyberaudit/cli.py harness run-skill cyberaudit-qa-resilience . --threshold HIGH --json reports/cyberaudit-qa-resilience-report.json
-```
-
-### 2. Emit Cryptographic Verification Seal (`SELLO-CYBERAUDIT-VERIFICADO`)
-
-```bash
-python cyberaudit/cli.py harness sello . --skill cyberaudit-qa-resilience --threshold HIGH
-```
-
-### 3. Evaluate Risk Tier & Recommended Skills
-
-```bash
-python cyberaudit/cli.py harness risk .
-```
-
-## Standard Finding Format
-
-Every finding reported must carry **where / why / repro / fix**:
+- `[blocking]` — Ships a vulnerability, data loss, invariant breach, or broken contract. Release blocker.
+- `[should-fix]` — Real defect with bounded blast radius; fix now or track explicitly.
+- `[nit]` — Minor code quality or stylistic issue with zero correctness or security impact.
+- `[question]` — Suspected defect where reachability cannot be proven from the diff alone.
 
 ```text
-[blocking] cyberaudit-qa-resilience:<file_path>:<line_number> — <finding_title>
-  where:  Exact file, line number, and code snippet.
-  why:    Invariant, CWE ID, or compliance control violated (e.g., DDIA Cap. 3, OWASP A03).
-  repro:  Exact attack vector, malformed input payload, or stress condition that triggers the flaw.
-  fix:    Concrete defensive remediation (exact code patch or architectural pattern).
+[blocking] src/repository/userRepo.js:42 — unvalidated SQL string concatenation
+  where:  db.query(`SELECT * FROM users WHERE id = '${userId}'`) at line 42
+  why:    userId comes from unvalidated req.params.id; permits SQL injection (CWE-89)
+  repro:  GET /users/'%20OR%201=1-- -> dumps the entire user table
+  fix:    db.query('SELECT * FROM users WHERE id = $1', [userId])
 ```
 
-## Gate Rules
+**Rule: no repro or stated mechanism -> it is a `[question]`, not a blocker.**
 
-1. **Verdict `PASS`:** `execution_status == "PASS"` and `0` open findings at or above the configured `--threshold` (default `HIGH`).
-2. **Verdict `BLOCK`:** Any open finding at or above `--threshold` blocks release certification until remediated or documented with a time-boxed waiver.
-3. **Cryptographic Trail:** Every seal is appended to `.rsc/cyberaudit-sello-log.jsonl` with commit SHA, branch, `artifact_digest`, and `seal_hash`.
+---
+
+## The Verdict
+
+End every audit review with exactly one verdict:
+
+- **`APPROVE`** — Zero blockers, zero unresolved should-fix. Point the user to `ship`.
+- **`APPROVE WITH NITS`** — Mergeable; nits listed but none block delivery.
+- **`CHANGES REQUESTED`** — At least one `[blocking]`. List precisely what unblocks it.
+
+---
+
+## Verification Script
+
+Run the deterministic pre-commit verification gate:
+
+```bash
+bash .antigravity/rsc/cyberaudit-qa-resilience/scripts/verify.sh "$TARGET" HIGH
+```
