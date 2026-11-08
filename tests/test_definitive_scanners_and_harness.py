@@ -267,6 +267,22 @@ class TestDefinitiveScannersAndHarness(unittest.TestCase):
             report = engine.scan_path(tmpdir)
             self.assertIn(report.execution_status, ("PASS", "BLOCK"))
 
+    def test_onboarding_engine_and_plan_id(self):
+        from cyberaudit.core.onboarding import OnboardingEngine
+        with tempfile.TemporaryDirectory() as tmpdir:
+            engine = OnboardingEngine(tmpdir)
+            plan = engine.generate_plan(technical_level="technical", project_kind="software")
+            self.assertTrue(plan["plan_id"].startswith("PLAN-"))
+            self.assertEqual(len(plan["selected_components"]), 6)
+
+            # Test applying plan
+            ok, msg = engine.apply_plan(plan, plan["plan_id"])
+            self.assertTrue(ok)
+            self.assertIn("CYBERAUDIT_ONBOARDING_READY", msg)
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, ".cyberaudit.json")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, ".antigravity", "AGENTS.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "harness", "user-profile.md")))
+
 
 if __name__ == "__main__":
     unittest.main()

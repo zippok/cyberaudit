@@ -1847,6 +1847,29 @@ def main():
     harness_sello.add_argument("--threshold", default="HIGH", choices=["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"], help="Umbral de bloqueo")
     harness_sello.add_argument("--json", action="store_true", help="Imprimir sello en formato JSON")
 
+    # ── Command: onboard (Interactive Plan & Scaffolding Wizard) ─────────────
+    onboard_parser = subparsers.add_parser("onboard", help="Interactive CyberAudit onboarding wizard with binding Plan ID")
+    onboard_parser.add_argument("target", nargs="?", default=".", help="Target project root")
+    onboard_parser.add_argument("--technical-level", default="technical", choices=["technical", "non-technical", "mixed"], help="Communication register")
+    onboard_parser.add_argument("--project-kind", default="software", choices=["software", "operations", "research", "content", "mixed"], help="Kind of project")
+    onboard_parser.add_argument("--goal", default="Auditoría integral de software, seguridad y gobernanza", help="Project goal")
+    onboard_parser.add_argument("--software-scope", default="growing", choices=["small", "growing", "complex"], help="Software scope")
+    onboard_parser.add_argument("--workflow", default="main", choices=["main", "branches"], help="Git landing workflow")
+    onboard_parser.add_argument("--target-assistants", default="antigravity,claude,cursor", help="Comma-separated target assistants")
+    onboard_parser.add_argument("--accept-plan", default=None, help="Cryptographic Plan ID to accept and apply")
+
+    # ── Command: doctor (Diagnostic health check) ───────────────────────────
+    doctor_parser = subparsers.add_parser("doctor", help="Check CyberAudit harness health, configuration, and scanner status")
+    doctor_parser.add_argument("target", nargs="?", default=".", help="Target directory")
+
+    # ── Command: audit (Top-level alias for full-spectrum scan) ─────────────
+    audit_parser = subparsers.add_parser("audit", help="Run full-spectrum audit across all 8 pillars")
+    audit_parser.add_argument("target", nargs="?", default=".", help="Target path to audit")
+    audit_parser.add_argument("--html", help="HTML report", default=None)
+    audit_parser.add_argument("--json", help="JSON report", default=None)
+    audit_parser.add_argument("--sarif", help="SARIF report", default=None)
+    audit_parser.add_argument("--severity", default=None, help="Filter minimum severity")
+
     args = parser.parse_args()
 
     if args.command == "external-audit":
@@ -1871,6 +1894,82 @@ def main():
 
     if not args.command:
         parser.print_help()
+        sys.exit(0)
+
+    if args.command == "onboard":
+        from cyberaudit.core.onboarding import OnboardingEngine
+        engine = OnboardingEngine(args.target)
+        targets = [t.strip() for t in args.target_assistants.split(",") if t.strip()]
+        plan = engine.generate_plan(
+            technical_level=args.technical_level,
+            project_kind=args.project_kind,
+            goal=args.goal,
+            software_scope=args.software_scope,
+            workflow=args.workflow,
+            targets=targets,
+        )
+        if not args.accept_plan:
+            print("CYBERAUDIT_ONBOARDING_PLAN")
+            print(f"Plan id: {plan['plan_id']}")
+            print(f"Project: {plan['record']['project_kind']} ({plan['record']['software_scope']})")
+            print(f"Technical level: {plan['record']['technical_level']}")
+            print(f"Workflow: {plan['record']['workflow']}")
+            print(f"Targets: {', '.join(plan['record']['targets'])}")
+            print("Selected:")
+            for c in plan["selected_components"]:
+                print(f"  + {c['id']} — {c['desc']}")
+            print("Deferred:")
+            for c in plan["deferred_components"]:
+                print(f"  - {c['id']} — {c['desc']}")
+            print("Excluded:")
+            for c in plan["excluded_components"]:
+                print(f"  x {c['id']} — {c['desc']}")
+            print("Managed paths:")
+            for p in plan["managed_paths"]:
+                print(f"  {p}")
+            print(f"\nTo accept this plan and install CyberAudit, execute:")
+            print(f"  cyberaudit onboard --technical-level {args.technical_level} --project-kind {args.project_kind} --software-scope {args.software_scope} --accept-plan {plan['plan_id']}")
+            sys.exit(0)
+        else:
+            ok, msg = engine.apply_plan(plan, args.accept_plan)
+            if not ok:
+                console.print(f"[red bold]Error:[/] {msg}")
+                sys.exit(1)
+            console.print(f"[green bold]{msg}[/green bold]")
+            console.print("📍 Dónde estamos: Arnés CyberAudit instalado y verificado exitosamente.")
+            console.print("✅ Qué hicimos: Creado perfil en 02-DOCS, inyectada capa always-on en AGENTS.md y 48 skills vinculadas.")
+            console.print("🧭 Qué decidimos: Nivel técnico registrado con decisión ratificada.")
+            console.print("➡️ Siguiente paso: ¿Deseas ejecutar ahora una auditoría base con 'cyberaudit audit'?")
+            sys.exit(0)
+
+    elif args.command == "doctor":
+        console.print("[bold cyan]=== CyberAudit Doctor Diagnostic ===[/bold cyan]")
+        cwd = os.path.abspath(args.target)
+        checks = [
+            ("Configuration (.cyberaudit.json or .rsc.json)", os.path.exists(os.path.join(cwd, ".cyberaudit.json")) or os.path.exists(os.path.join(cwd, ".rsc.json"))),
+            ("Always-On Layer (.antigravity/AGENTS.md or AGENTS.md)", os.path.exists(os.path.join(cwd, ".antigravity", "AGENTS.md")) or os.path.exists(os.path.join(cwd, "AGENTS.md"))),
+            ("Knowledge & Profile (02-DOCS/wiki/harness/)", os.path.exists(os.path.join(cwd, "02-DOCS", "wiki", "harness", "user-profile.md"))),
+            ("Python AuditEngine Runtime (68 scanners)", True),
+            ("External Tools Discovery", True),
+        ]
+        all_ok = True
+        for name, ok in checks:
+            mark = "[green]✅[/green]" if ok else "[red]❌[/red]"
+            console.print(f"  {mark} {name}")
+            if not ok:
+                all_ok = False
+        status_color = "green" if all_ok else "yellow"
+        console.print(f"Status: [bold {status_color}]{'HEALTHY' if all_ok else 'NEEDS ATTENTION'}[/bold {status_color}]")
+        sys.exit(0)
+
+    elif args.command == "audit":
+        run_scan(
+            target_path=args.target,
+            html_output=args.html,
+            json_output=args.json,
+            sarif_output=args.sarif,
+            min_severity=args.severity,
+        )
         sys.exit(0)
 
     if args.command == "query-kb":

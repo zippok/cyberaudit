@@ -18,10 +18,10 @@ Combina **68 escáneres estáticos de alto rendimiento** (analiza cientos de arc
 Si utilizas un asistente de IA en tu editor (**Google Antigravity, Claude Code, Cursor, Copilot o Windsurf**), no necesitas ejecutar comandos manuales. Solo abre el chat de tu agente en cualquier proyecto y escribe:
 
 > 💬 **Prompt de Instalación en Español (copiar y pegar en el chat de tu agente):**  
-> *"Lee https://github.com/zippok/cyberaudit y configura CyberAudit para este proyecto. Hazme las preguntas de configuración, muéstrame el plan exacto y espera mi confirmación antes de escribir o modificar archivos."*
+> *"Lee https://github.com/zippok/cyberaudit y configura CyberAudit para este proyecto. Hazme las preguntas del onboarding, enséñame el plan exacto y espera mi aceptación antes de escribir nada."*
 
 > 💬 **English Alternative:**  
-> *"Read https://github.com/zippok/cyberaudit and set up CyberAudit for this project. Ask me what areas I want to audit, show me the exact plan, and wait for my acceptance before installing."*
+> *"Read https://github.com/zippok/cyberaudit and set up CyberAudit for this project. Ask me the onboarding questions, show me the exact plan, and wait for my acceptance before writing anything."*
 
 El agente leerá las directivas de [`ONBOARDING.md`](ONBOARDING.md), detectará el stack de tu proyecto, te hará tres preguntas rápidas, te mostrará el plan y dejará todo configurado.
 

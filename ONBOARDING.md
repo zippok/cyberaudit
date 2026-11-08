@@ -1,86 +1,104 @@
-# CyberAudit Agent-Driven Onboarding Specification
+# CyberAudit — Especificación de Onboarding Interactivo para Agentes de IA
 
-> **Target Audience:** AI Assistants & Agents (Google Antigravity, Claude Code, Cursor, Copilot, Codex, Windsurf).
-> **Role:** When a user asks you to *"Lee este repositorio y configura CyberAudit para este proyecto"* or *"Read this repo and set up CyberAudit for this project"*, follow this protocol strictly. Always conduct the interview and present the plan in the same language the user prompted you with (Spanish or English).
+> **Audiencia Objetivo:** Asistentes y Agentes de Código con IA (Google Antigravity, Claude Code, Cursor, Copilot, Codex, Windsurf).  
+> **Cometido:** Cuando un usuario te envíe el prompt de configuración de CyberAudit:
+>
+> 🇪🇸 **Español:**  
+> `"Lee https://github.com/zippok/cyberaudit y configura CyberAudit para este proyecto. Hazme las preguntas del onboarding, enséñame el plan exacto y espera mi aceptación antes de escribir nada."`
+>
+> 🇬🇧 **English:**  
+> `"Read https://github.com/zippok/cyberaudit and set up CyberAudit for this project. Ask me the onboarding questions, show me the exact plan, and wait for my acceptance before writing anything."`
+>
+> **REGLA SUPREMA:** No elijas componentes ni inventes respuestas por el usuario. El plan vinculante debe mostrarse con su identificador criptográfico (`Plan ID: PLAN-<sha256>`) y esperar la aceptación explícita del usuario antes de crear o modificar un solo archivo.
 
 ---
 
-## 1. Operating Protocol for AI Agents
-
-You must follow an **Interactive 5-Step Gated Onboarding Flow**:
+## 1. Protocolo de Onboarding en 5 Fases
 
 ```text
-[Step 1: Inspect Project] -> [Step 2: Interactive Interview] -> [Step 3: Present Plan] -> [Step 4: User Approval Gate] -> [Step 5: Install & Verify]
+[Fase 1: Registro] ➔ [Fase 2: Descubrimiento] ➔ [Fase 3: Plan con PLAN-ID] ➔ [Fase 4: Aceptación Explícita] ➔ [Fase 5: Andamiaje & Verificación]
 ```
 
-### Step 1: Inspect the Target Project Stack
-Analyze the workspace files to detect the tech stack:
-- **Languages:** Node.js/TypeScript (`package.json`), Python (`pyproject.toml`, `requirements.txt`), Go (`go.mod`), Dart/Flutter (`pubspec.yaml`), Rust (`Cargo.toml`).
-- **Frameworks:** React/Next.js, FastAPI, Django, Express, NestJS, Tailwind, Prisma, SQLAlchemy.
-- **Git State:** Current branch, clean working tree, existing test runners (`npm test`, `pytest`, `go test`).
+### Fase 1: El Registro (Literalmente la primera pregunta)
+Antes de escanear o recomendar nada, haz una sola pregunta en el idioma del usuario:
+> **"¿Te hablo en lenguaje técnico o con analogías?"**
 
-### Step 2: Interactive Interview (Ask the User 3 Questions)
-Ask the user the following questions in a friendly, concise manner:
-1. **Auditing Depth:**
-   - **(Recommended) CyberAudit Full:** All 68 scanners across Security, Architecture, QA, UI/UX, Cloud, AI and Compliance.
-   - **Targeted Security & Privacy:** AppSec (12 scanners) + Cloud/DevSecOps (11 scanners) + GDPR (7 scanners).
-   - **Engineering & QA:** Software Architecture (5 scanners) + QA/Resilience (17 scanners) + UI/UX (10 scanners).
-2. **Blocking Threshold:**
-   - **(Recommended) HIGH:** Block commits/releases only on High and Critical findings (cvss >= 7.0 / cwe major).
-   - **CRITICAL:** Block only on exploit-ready Critical vulnerabilities.
-3. **Automated Cryptographic Seal:**
-   - **(Recommended) Yes:** Emit an immutable `SELLO-CYBERAUDIT-VERIFICADO` (SHA-256) recorded in `.rsc/cyberaudit-sello-log.jsonl`.
+* Registra `technical_level: technical` (términos formales de ingeniería) o `non-technical` (lenguaje cotidiano y analogías intuitivas).
+* Esta respuesta define cómo hablarán todas las herramientas y skills a lo largo del proyecto.
 
-### Step 3: Present the Installation Plan Table
-Generate a markdown table showing the proposed configuration and wait for explicit confirmation:
+### Fase 2: Descubrimiento de Objetivos & Stack
+Inspecciona la raíz del proyecto (`package.json`, `pyproject.toml`, `Cargo.toml`, etc.) y haz dos preguntas breves:
+1. **Objetivo & Alcance:** ¿Cuál es el propósito central del proyecto y qué alcance tiene (pequeño, en crecimiento, complejo)?
+2. **Prioridades de Auditoría & Gobernanza:**
+   * *(Recomendado)* **CyberAudit Full:** Los 68 escáneres en los 8 pilares (Seguridad, Arquitectura, QA, UI/UX, DevSecOps, GDPR, AI Safety, Threat Hunting).
+   * **AppSec & DevSecOps:** Seguridad de aplicaciones, APIs, Docker/K8s y nube.
+   * **Ingeniería & QA:** Arquitectura de software, concurrencia, resiliencia y accesibilidad.
 
-```markdown
-### Proposed CyberAudit Installation Plan
+### Fase 3: Generación del Plan Vinculante (Plan ID Criptográfico)
+Genera el bloque formal `CYBERAUDIT_ONBOARDING_PLAN` con un hash SHA-256 único:
 
-| Component | Target Location | Description |
-| :--- | :--- | :--- |
-| **CLI Engine** | System / Python Virtualenv | CyberAudit 2.0 CLI (`cyberaudit harness`) |
-| **Skills** | `.antigravity/rsc/` (or `.agents/skills/`) | Selected CyberAudit RSC skills |
-| **Threshold** | `HIGH` | Gated verification threshold |
-| **Verification Gate** | `bash <skill>/scripts/verify.sh .` | Deterministic pre-commit gate |
-| **Audit Seal** | `.rsc/cyberaudit-sello-log.jsonl` | Cryptographic SHA-256 release seal |
+```text
+CYBERAUDIT_ONBOARDING_PLAN
+Plan id: PLAN-8f4b2c19
+Proyecto: software (growing)
+Nivel técnico: technical
+Flujo Git: main (o ramas con pull request según prefiera el usuario)
+Asistentes destino: antigravity, claude, cursor
+
+Componentes Seleccionados:
+  + harness/control-plane — Andamiaje 01-TOOLS/_TEMPLATE/ y 02-DOCS/wiki/harness/
+  + always-on/cyberaudit-suggest — Capa decisora en AGENTS.md (carriles Answer, FTD, ASDD, Audit & Fix)
+  + refuters/multi-agent-panel — 3 subagentes refutadores en paralelo (Seguridad, Arquitectura, QA)
+  + skills/core — Habilidades base (init, harness, orient, review, code-review, secure-coding)
+  + skills/cyberaudit — Auditoría completa (cyberaudit-full) y auto-reparación (cyberaudit-autofix)
+  + tools/external-orchestrator — npm audit, pip-audit, gitleaks, trivy con fallback nativo transparente
+
+Componentes Pospuestos:
+  - ci-cd/strict-gate — Pipeline bloqueante de GitHub Actions (se activa al preparar el release)
+
+Componentes Excluidos:
+  × remote-telemetry — Operación 100% local, sin servidores externos ni envío de datos
+
+Rutas a Gobernar:
+  .cyberaudit.json
+  .antigravity/AGENTS.md (o AGENTS.md / CLAUDE.md según el asistente)
+  02-DOCS/wiki/harness/user-profile.md
+  02-DOCS/wiki/harness/decisions.md
+  01-TOOLS/_TEMPLATE/
 ```
 
-### Step 4: User Approval Gate (Mandatory)
-**DO NOT write or modify any files** until the user explicitly says *"Accept"*, *"Proceed"*, *"Adelante"*, or confirms the plan.
+### Fase 4: Puerta de Aceptación (Gated Confirmation)
+**ALTO.** No escribas, crees ni modifiques ningún archivo. Espera a que el usuario responda confirmando el plan (ej: *"acepto PLAN-8f4b2c19"* o *"sí, adelante"*).
 
-### Step 5: Execute Installation and First Verification
-Once approved:
-1. **Install Engine:**
-   ```bash
-   pip install -e /path/to/cyberaudit
-   # OR from GitHub:
-   pip install git+https://github.com/zippok/cyberaudit.git
-   ```
-2. **Copy Skills to the Project:**
-   Copy the selected skills into the project's agent skills directory:
-   - For Antigravity: `.antigravity/rsc/cyberaudit-*`
-   - For Claude Code / Cursor: `.agents/skills/cyberaudit-*`
-3. **Execute Baseline Scan:**
-   Run the verification gate:
-   ```bash
-   cyberaudit harness run-skill cyberaudit-full . --threshold HIGH
-   ```
-4. **Report Baseline Findings to User:**
-   Present any existing findings using the standard **`where / why / repro / fix`** format and offer to apply TDD remediation (Red $\rightarrow$ Green $\rightarrow$ Refactor).
+### Fase 5: Andamiaje, Gobernanza y Primera Verificación
+Una vez aceptado el plan:
+1. **Persistir Perfil y Decisiones:**
+   * Escribir `02-DOCS/wiki/harness/user-profile.md` con el registro elegido y los objetivos.
+   * Escribir `02-DOCS/wiki/harness/decisions.md` (append-only) con la entrada de onboarding.
+2. **Inyectar la Capa Always-On:**
+   * Escribir o actualizar `.antigravity/AGENTS.md` (o `AGENTS.md`) con el bloque `<!-- cyberaudit-suggest:start -->` conteniendo el decisor de 4 carriles (*Answer*, *FTD*, *ASDD*, *Audit & Fix*), el panel refutador, la brújula de orientación y el danger guard.
+3. **Instalar Skills:**
+   * Copiar las skills a `.antigravity/rsc/` o vincular el catálogo en `.cyberaudit/skills/`.
+4. **Emitir Señal de Éxito:**
+   Imprimir la confirmación formal:
+   `CYBERAUDIT_ONBOARDING_READY PLAN-8f4b2c19`
+5. **Cerrar con Orientación:**
+   Finalizar con el bloque-brújula (`📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso`).
 
 ---
 
-## 2. Available CyberAudit Skills Directory
+## 2. Catálogo de Habilidades Disponibles
 
-| Skill ID | Scanners | Domain | Standards |
+| Habilidad (Skill ID) | Escáneres / Rol | Dominio de Ingeniería | Estándares y Doctrina |
 | :--- | :---: | :--- | :--- |
-| `cyberaudit-appsec` | 12 | AppSec, Pentest, Injections, Auth & APIs | OWASP Top 10:2025, OWASP API Top 10 |
-| `cyberaudit-devsecops` | 11 | AWS/GCP/Azure, K8s, Docker, Supply Chain | CIS Benchmarks, SLSA v1.0 |
-| `cyberaudit-soc-dfir` | 7 | SOC, Threat Hunting, AD & Incident Triage | MITRE ATT&CK v16, NIST SP 800-61r2 |
-| `cyberaudit-ai-safety` | 5 | LLM Security, FinOps, Prompt Injection, RAG | OWASP LLM Top 10:2025, NIST AI RMF |
-| `cyberaudit-architecture`| 5 | Clean Arch, Zero-Downtime DB, Idempotency | Kleppmann DDIA, Robert C. Martin |
-| `cyberaudit-qa-resilience`| 17 | Anti-Theater Testing, ReDoS, Crash-Safety | Dave Farley CD, Martin Fowler Refactoring |
-| `cyberaudit-ui-ux-a11y` | 10 | WCAG 2.2 AA/AAA, Core Web Vitals, Design | W3C WCAG 2.2, Nielsen Norman Heuristics |
-| `cyberaudit-compliance-privacy` | 7 | GDPR, PII Redaction, SOC 2, ISO 27001 | EU GDPR (Art. 5/13-17/30/32), SOC 2 |
-| `cyberaudit-full` | 68 | All 68 Scanners Full-Spectrum Audit | All Integrated Industry Standards |
+| `cyberaudit-full` | 68 | Auditoría Completa de Extremo a Extremo | Todos los estándares integrados |
+| `cyberaudit-autofix` | Motor TDD | Auto-reparación Atómica de Hallazgos | Red Test ➔ Green Patch ➔ Static Verify |
+| `cyberaudit-appsec` | 12 | Inyecciones, Auth, APIs, Pentesting | OWASP Top 10:2025, ASVS v4.0, CWE Top 25 |
+| `cyberaudit-devsecops` | 11 | Docker, K8s, CI/CD, Nube, SBOM | CIS Benchmarks, SLSA v1.0, NIST SSDF |
+| `cyberaudit-architecture` | 5 | Clean Arch, Límites, DB, Idempotencia | DDIA Martin Kleppmann, Clean Architecture |
+| `cyberaudit-qa-resilience` | 17 | Concurrencia, Memory Leaks, ReDoS, Tests | Dave Farley CD, Martin Fowler Refactoring |
+| `cyberaudit-ui-ux-a11y` | 10 | WCAG 2.2 AA/AAA, CWV, Ergonomía | W3C WCAG 2.2, Nielsen Norman Group |
+| `cyberaudit-compliance-privacy` | 7 | GDPR, ROPA, PII, SOC 2, ISO 27001 | GDPR (Art. 5/13-17/30/32), SOC 2 Type II |
+| `cyberaudit-ai-safety` | 5 | Inyecciones Indirectas, Drift, FinOps | OWASP LLM Top 10:2025, NIST AI RMF |
+| `cyberaudit-soc-dfir` | 7 | Sigma, YARA, LOLBAS, AD, DFIR | MITRE ATT&CK v16, NIST SP 800-61r2 |
+| `core-harness` | 12 | Init, Harness, Orient, Review, Verify | RSC Protocol (Eric Risco) |

@@ -1,0 +1,36 @@
+{
+  "name": "cyberaudit",
+  "version": "2.1.0",
+  "description": "CyberAudit — Complete Full-Spectrum Software Engineering, Auditing and Auto-Remediation Meta-Harness for AI Coding Agents",
+  "main": "cli.js",
+  "bin": {
+    "cyberaudit": "./cli.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "onboard": "node cli.js onboard",
+    "audit": "node cli.js audit",
+    "doctor": "node cli.js doctor"
+  },
+  "keywords": [
+    "cyberaudit",
+    "rsc",
+    "harness",
+    "audit",
+    "appsec",
+    "architecture",
+    "qa",
+    "resilience",
+    "tdd",
+    "ai-agents",
+    "antigravity",
+    "claude",
+    "cursor"
+  ],
+  "author": "CyberAudit Open Source Community",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

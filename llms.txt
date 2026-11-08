@@ -1,0 +1,99 @@
+# CyberAudit — El Arnés Integral de Ingeniería de Software, Auditoría y Auto-Reparación para Agentes de IA
+
+> Tú construyes el producto. CyberAudit construye su arnés de gobernanza: memoria viva (02-DOCS/), conexiones operativas (01-TOOLS/), panel refutador multi-agente, 68 escáneres estáticos y de arquitectura en 8 pilares, orquestación de herramientas externas de industria y motor de auto-reparación TDD. Su asistente sigue las mejores prácticas de ingeniería de software en lugar de improvisar arneses frágiles.
+
+Repositorio Oficial: [https://github.com/zippok/cyberaudit](https://github.com/zippok/cyberaudit)
+
+CyberAudit unifica los estándares Agent Skills, MCP y AGENTS.md en un método holístico: analiza la raíz del proyecto, pregunta el registro de comunicación, genera un plan vinculante con Plan ID criptográfico, exige confirmación previa explícita, verifica el andamiaje y permite auditar y reparar cualquier fallo encontrado.
+
+---
+
+## El Decisor de Carriles (Lane Decisor)
+
+Una vez instalado, cada turno del usuario es clasificado en exactamente uno de los cuatro carriles, y el agente nombra el carril elegido:
+
+1. **ANSWER (Respuesta / Consulta):** La solicitud pide información (explicar, comparar, investigar, proponer). Modo solo lectura: no escribe archivos ni crea artefactos de código. La ambigüedad en la intención se resuelve con una sola pregunta manteniéndose en este carril.
+2. **FTD (Fast-Track Development):** Trabajo ordinario de alcance acotado y seguro. Un documento de funcionalidad por cambio en `02-DOCS/`; tareas marcadas únicamente tras evidencia observada (`observed proof`).
+3. **ASDD (Agentic Spec-Driven Development):** Tareas complejas con dependencias mutuas o arquitectura sensible. Ciclo formal de especificación, clarificación con el usuario y aprobación antes de construir.
+4. **AUDIT & FIX (Auditoría Integral & Auto-Reparación TDD):** Escaneo estático/dinámico en los 8 pilares de ingeniería (AppSec, DevSecOps, Arquitectura, QA, UI/UX, Compliance, AI Safety, SOC) o auto-reparación de hallazgos mediante el ciclo TDD: prueba roja de reproducción (*Red Test*), parche defensivo atómico (*Green Patch*) y verificación estática sin regresiones.
+
+---
+
+## Instrucciones para Agentes de IA: Instalación de CyberAudit en el Proyecto del Usuario
+
+Si el usuario te pidió instalar o configurar CyberAudit con el prompt:
+> *"Lee https://github.com/zippok/cyberaudit y configura CyberAudit para este proyecto. Hazme las preguntas del onboarding, enséñame el plan exacto y espera mi aceptación antes de escribir nada."*
+
+Ejecuta estrictamente los siguientes pasos en orden:
+
+### Paso 1: Trabajar en la Raíz del Proyecto
+Opera siempre en la raíz del espacio de trabajo del usuario (`cwd`). Nunca dentro de un clon o carpeta temporal.
+
+### Paso 2: Pregunta Obligatoria de Registro (Literalmente lo primero que dices)
+Antes de escanear o recomendar nada, haz una sola pregunta en el idioma del usuario:
+> **"¿Te hablo en lenguaje técnico o con analogías?"**
+
+Registra el nivel técnico: `technical` (términos formales de ingeniería) o `non-technical` (analogías cotidianas y explicaciones intuitivas).
+
+### Paso 3: Descubrimiento del Proyecto
+Pregunta brevemente:
+1. ¿Cuál es el objetivo principal del proyecto y qué stack utiliza?
+2. ¿Qué áreas prioritarias deseas auditar o gobernar? (Seguridad AppSec, Arquitectura, QA/Resiliencia, DevSecOps, UI/UX, Privacidad/GDPR, Seguridad de IA o Todo el Proyecto).
+
+### Paso 4: Generar el Plan de Onboarding Vinculante con Plan ID
+Inspecciona la raíz del proyecto (`package.json`, `pyproject.toml`, `requirements.txt`, Dockerfiles, estructura de carpetas) y genera un **Plan ID criptográfico SHA-256** (ejemplo: `PLAN-a7f4c91e`):
+
+Muestra obligatoriamente la tabla estructurada:
+```text
+CYBERAUDIT_ONBOARDING_PLAN
+Plan ID: PLAN-<sha256-hex>
+Nivel Técnico: <technical | non-technical>
+Objetivo: <resumen del usuario>
+Carril Inicial: <Answer | FTD | ASDD | Audit & Fix>
+
+[+] Componentes Seleccionados:
+  + harness/control-plane — Andamiaje 01-TOOLS/ y 02-DOCS/wiki/harness/
+  + always-on/cyberaudit-suggest — Capa de gobernanza y decisión en AGENTS.md
+  + refuters/multi-agent-panel — Panel de 3 refutadores (Seguridad, Arquitectura, QA)
+  + skills/core — Habilidades base (init, harness, orient, review, code-review, secure-coding)
+  + skills/cyberaudit — Habilidades de auditoría y auto-reparación (cyberaudit-full, cyberaudit-autofix)
+  + tools/external-orchestrator — npm audit, pip-audit, gitleaks, trivy con fallback nativo
+
+[-] Componentes Pospuestos:
+  - ci-cd/blocking-pipeline — Integración estricta de GitHub Actions (se activa al desplegar)
+
+[x] Componentes Excluidos:
+  x remote-telemetry — CyberAudit opera 100% local, sin cuentas externas ni servidores en nube
+
+Rutas a Gobernar:
+  .cyberaudit.json
+  .antigravity/AGENTS.md
+  02-DOCS/wiki/harness/user-profile.md
+  02-DOCS/wiki/harness/decisions.md
+  01-TOOLS/_TEMPLATE/
+```
+
+### Paso 5: Espera la Aceptación Explícita del Usuario
+**DETENTE.** No crees, modifiques ni escribas un solo archivo hasta que el usuario responda explícitamente aceptando el Plan ID (por ejemplo: *"acepto PLAN-a7f4c91e"* o *"sí, procede"*).
+
+### Paso 6: Andamiaje y Verificación
+Tras la aceptación:
+1. Crea `02-DOCS/wiki/harness/user-profile.md` con el nivel técnico y objetivos.
+2. Crea `02-DOCS/wiki/harness/decisions.md` registrando la decisión de instalación.
+3. Inyecta en `.antigravity/AGENTS.md` (y `AGENTS.md` / `CLAUDE.md`) la capa *always-on* `cyberaudit-suggest`.
+4. Copia las skills a `.antigravity/rsc/` o `.cyberaudit/skills/`.
+5. Confirma con la señal:
+   `CYBERAUDIT_ONBOARDING_READY PLAN-<sha256-hex>`
+6. Cierra con el bloque-brújula de orientación (`📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso`).
+
+---
+
+## Comandos del CLI de CyberAudit
+
+- `cyberaudit onboard`: Inicia el wizard interactivo de onboarding.
+- `cyberaudit audit [path]`: Ejecuta los 68 escáneres nativos y las herramientas externas en los 8 pilares.
+- `cyberaudit fix <finding-id>`: Ejecuta el micro-bucle TDD para reparar automáticamente un hallazgo.
+- `cyberaudit doctor`: Diagnostica la salud del arnés, archivos de configuración y hooks.
+- `cyberaudit list`: Lista las 48 skills y herramientas disponibles.
+- `cyberaudit sync`: Sincroniza las skills declaradas con los asistentes de IA activos.
+- `cyberaudit sello`: Emite o verifica el sello criptográfico `SELLO-CYBERAUDIT-VERIFICADO`.
