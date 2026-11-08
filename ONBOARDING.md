@@ -62,9 +62,14 @@ Componentes Excluidos:
 Rutas a Gobernar:
   .cyberaudit.json
   .antigravity/AGENTS.md (o AGENTS.md / CLAUDE.md según el asistente)
-  02-DOCS/wiki/harness/user-profile.md
-  02-DOCS/wiki/harness/decisions.md
+  01-TOOLS/.gitignore
   01-TOOLS/_TEMPLATE/
+  02-DOCS/inbox/
+  02-DOCS/raw/worklog/
+  02-DOCS/wiki/index.md
+  02-DOCS/wiki/harness/user-profile.md
+  02-DOCS/wiki/harness/installation-plan.md
+  02-DOCS/wiki/harness/decisions.md
 ```
 
 ### Fase 4: Puerta de Aceptación (Gated Confirmation)
@@ -72,18 +77,26 @@ Rutas a Gobernar:
 
 ### Fase 5: Andamiaje, Gobernanza y Primera Verificación
 Una vez aceptado el plan:
-1. **Persistir Perfil y Decisiones:**
-   * Escribir `02-DOCS/wiki/harness/user-profile.md` con el registro elegido y los objetivos.
+1. **Andamiaje de Herramientas Operativas (`01-TOOLS/`):**
+   * Crear `01-TOOLS/.gitignore` para proteger credenciales (`*/.env`, `*/keys/`, `*/out/`).
+   * Desplegar la plantilla `01-TOOLS/_TEMPLATE/`: `.env.example`, `CREDENTIALS.md`, `.gitignore`, `README.md`, `test_connection.sh`.
+2. **Motor Caos a Conocimiento (`02-DOCS/`):**
+   * Crear `02-DOCS/inbox/README.md` (buzón para ingesta de datos brutos).
+   * Crear `02-DOCS/raw/worklog/README.md` (bitácora de evidencias y sesiones).
+   * Crear `02-DOCS/wiki/index.md` (catálogo y hub OKF v0.1 / Obsidian).
+   * Crear `02-DOCS/wiki/log.md` (registro cronológico de cambios de conocimiento).
+   * Escribir `02-DOCS/wiki/harness/user-profile.md` con el registro y objetivos.
+   * Escribir `02-DOCS/wiki/harness/installation-plan.md` con el plan criptográfico y componentes.
    * Escribir `02-DOCS/wiki/harness/decisions.md` (append-only) con la entrada de onboarding.
-2. **Inyectar la Capa Always-On:**
+3. **Inyectar la Capa Always-On:**
    * Escribir o actualizar `.antigravity/AGENTS.md` (o `AGENTS.md`) con el bloque `<!-- cyberaudit-suggest:start -->` conteniendo el decisor de 4 carriles (*Answer*, *FTD*, *ASDD*, *Audit & Fix*), el panel refutador, la brújula de orientación y el danger guard.
-3. **Instalar Skills:**
+4. **Instalar Skills:**
    * Copiar las skills a `.antigravity/rsc/` o vincular el catálogo en `.cyberaudit/skills/`.
-4. **Emitir Señal de Éxito:**
+5. **Emitir Señal de Éxito:**
    Imprimir la confirmación formal:
    `CYBERAUDIT_ONBOARDING_READY PLAN-8f4b2c19`
-5. **Cerrar con Orientación:**
-   Finalizar con el bloque-brújula (`📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso`).
+6. **Cerrar con Orientación:**
+   Finalizar con el bloque-brújula (`📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso (terminando en pregunta)`).
 
 ---
 

@@ -281,7 +281,21 @@ class TestDefinitiveScannersAndHarness(unittest.TestCase):
             self.assertIn("CYBERAUDIT_ONBOARDING_READY", msg)
             self.assertTrue(os.path.exists(os.path.join(tmpdir, ".cyberaudit.json")))
             self.assertTrue(os.path.exists(os.path.join(tmpdir, ".antigravity", "AGENTS.md")))
+
+            # 01-TOOLS scaffolding verification
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "01-TOOLS", ".gitignore")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "01-TOOLS", "_TEMPLATE", "test_connection.sh")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "01-TOOLS", "_TEMPLATE", ".env.example")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "01-TOOLS", "_TEMPLATE", "CREDENTIALS.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "01-TOOLS", "_TEMPLATE", "README.md")))
+
+            # 02-DOCS scaffolding verification
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "inbox", "README.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "raw", "worklog", "README.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "index.md")))
             self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "harness", "user-profile.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "harness", "installation-plan.md")))
+            self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "harness", "decisions.md")))
 
 
 if __name__ == "__main__":

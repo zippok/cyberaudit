@@ -167,9 +167,14 @@ function handleOnboard() {
     console.log('Managed paths:');
     console.log('  .cyberaudit.json');
     console.log('  .antigravity/AGENTS.md');
-    console.log('  02-DOCS/wiki/harness/user-profile.md');
-    console.log('  02-DOCS/wiki/harness/decisions.md');
+    console.log('  01-TOOLS/.gitignore');
     console.log('  01-TOOLS/_TEMPLATE/');
+    console.log('  02-DOCS/inbox/');
+    console.log('  02-DOCS/raw/worklog/');
+    console.log('  02-DOCS/wiki/index.md');
+    console.log('  02-DOCS/wiki/harness/user-profile.md');
+    console.log('  02-DOCS/wiki/harness/installation-plan.md');
+    console.log('  02-DOCS/wiki/harness/decisions.md');
     console.log('');
     console.log(`To accept this plan and install CyberAudit, execute:`);
     console.log(`  npx cyberaudit onboard --technical-level ${technicalLevel} --project-kind ${projectKind} --software-scope ${softwareScope} --accept-plan ${planId}`);
@@ -184,8 +189,6 @@ function handleOnboard() {
   // Execute installation
   console.log(`Applying accepted plan ${planId}...`);
   mkdirSync(join(cwd, '.cyberaudit'), { recursive: true });
-  mkdirSync(join(cwd, '01-TOOLS', '_TEMPLATE'), { recursive: true });
-  mkdirSync(join(cwd, '02-DOCS', 'wiki', 'harness'), { recursive: true });
   mkdirSync(join(cwd, '.antigravity', 'rsc'), { recursive: true });
 
   const manifest = {
@@ -198,26 +201,8 @@ function handleOnboard() {
   writeFileSync(join(cwd, '.cyberaudit.json'), JSON.stringify(manifest, null, 2), 'utf-8');
   writeFileSync(join(cwd, '.rsc.json'), JSON.stringify({ version: 1, targets: targets, skills: ['cyberaudit-full', 'cyberaudit-autofix'] }, null, 2), 'utf-8');
 
-  // User profile & decisions
-  const userProfile = `# User Profile
-- **Technical Level:** ${technicalLevel}
-- **Project Kind:** ${projectKind}
-- **Goal:** ${goal}
-- **Software Scope:** ${softwareScope}
-- **Workflow:** ${workflow}
-- **Plan ID:** ${planId}
-- **Installed At:** ${new Date().toISOString()}
-`;
-  writeFileSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'user-profile.md'), userProfile, 'utf-8');
-
-  const decisionEntry = `# Project Decisions Log
-## [${new Date().toISOString()}] CyberAudit Onboarding Accepted
-- **Plan ID:** ${planId}
-- **Decision:** Installed CyberAudit meta-harness with 68 scanners, 48 skills, and always-on decisor.
-- **Technical Register:** ${technicalLevel}
-- **Status:** Ratified
-`;
-  writeFileSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'decisions.md'), decisionEntry, 'utf-8');
+  // Comprehensive Scaffolding of 01-TOOLS and 02-DOCS
+  ensureHarnessSkeleton(cwd, planRecord, planId);
 
   // Always-On AGENTS.md
   const alwaysOn = buildAlwaysOnAgentsMd(technicalLevel);
@@ -243,9 +228,151 @@ function handleOnboard() {
 
   console.log(`CYBERAUDIT_ONBOARDING_READY ${planId}`);
   console.log(`📍 Dónde estamos: Arnés CyberAudit instalado y verificado exitosamente.`);
-  console.log(`✅ Qué hicimos: Creado perfil en 02-DOCS, inyectada capa always-on en AGENTS.md y 48 skills vinculadas.`);
+  console.log(`✅ Qué hicimos: Creado andamiaje 01-TOOLS/ y 02-DOCS/, inyectada capa always-on en AGENTS.md y 48 skills vinculadas.`);
   console.log(`🧭 Qué decidimos: Nivel técnico '${technicalLevel}' con flujo '${workflow}'.`);
   console.log(`➡️ Siguiente paso: ¿Deseas ejecutar ahora una auditoría base con 'cyberaudit audit'?`);
+}
+
+const TOOLS_IGNORE = [
+  '# Escrito por CyberAudit: la capa de herramientas guarda credenciales.',
+  '*/.env',
+  '*/.env.*',
+  '!*/.env.example',
+  '*/keys/',
+  '*/out/',
+  '',
+].join('\n');
+
+function ensureHarnessSkeleton(cwd, planRecord, planId) {
+  const templatesRoot = join(__dirname, 'templates');
+
+  // 1. 01-TOOLS scaffolding
+  const toolsDir = join(cwd, '01-TOOLS');
+  const templateDir = join(toolsDir, '_TEMPLATE');
+  mkdirSync(templateDir, { recursive: true });
+
+  const toolsIgnorePath = join(toolsDir, '.gitignore');
+  if (!existsSync(toolsIgnorePath)) {
+    const srcIgnore = join(templatesRoot, '01-TOOLS', '.gitignore');
+    if (existsSync(srcIgnore)) {
+      copyFileSync(srcIgnore, toolsIgnorePath);
+    } else {
+      writeFileSync(toolsIgnorePath, TOOLS_IGNORE, 'utf-8');
+    }
+  }
+
+  const templateFiles = [
+    { name: '.env.example', fallback: '# <TOOL_NAME> credentials\n<TOOL>_ENV=test\n<TOOL>_API_KEY=\n<TOOL>_API_SECRET=\n' },
+    { name: 'CREDENTIALS.md', fallback: '# Credentials — <TOOL_NAME>\n\n## Provider dashboard\n- URL: https://...\n' },
+    { name: '.gitignore', fallback: '.env\nkeys/\nout/\n*.json\n!*.example.json\n' },
+    { name: 'README.md', fallback: '# <TOOL_NAME>\n\n> Operational tooling.\n' },
+    { name: 'test_connection.sh', fallback: '#!/usr/bin/env bash\nset -euo pipefail\necho "OK — credentials valid."\n' },
+  ];
+
+  for (const item of templateFiles) {
+    const dst = join(templateDir, item.name);
+    if (!existsSync(dst)) {
+      const src = join(templatesRoot, '01-TOOLS', '_TEMPLATE', item.name === '.gitignore' ? 'gitignore' : item.name);
+      if (existsSync(src)) {
+        copyFileSync(src, dst);
+      } else {
+        writeFileSync(dst, item.fallback, 'utf-8');
+      }
+    }
+  }
+
+  // 2. 02-DOCS scaffolding
+  const docsDir = join(cwd, '02-DOCS');
+  const inboxDir = join(docsDir, 'inbox');
+  const worklogDir = join(docsDir, 'raw', 'worklog');
+  const wikiDir = join(docsDir, 'wiki');
+  const harnessDir = join(wikiDir, 'harness');
+
+  mkdirSync(inboxDir, { recursive: true });
+  mkdirSync(worklogDir, { recursive: true });
+  mkdirSync(harnessDir, { recursive: true });
+
+  const inboxReadme = join(inboxDir, 'README.md');
+  if (!existsSync(inboxReadme)) {
+    const src = join(templatesRoot, '02-DOCS', 'inbox', 'README.md');
+    if (existsSync(src)) copyFileSync(src, inboxReadme);
+    else writeFileSync(inboxReadme, '# Inbox — Ingesta de Datos en Crudo\n\nDeposita aquí cualquier archivo en crudo para ser indexado por CyberAudit.\n', 'utf-8');
+  }
+
+  const worklogReadme = join(worklogDir, 'README.md');
+  if (!existsSync(worklogReadme)) {
+    const src = join(templatesRoot, '02-DOCS', 'raw', 'worklog', 'README.md');
+    if (existsSync(src)) copyFileSync(src, worklogReadme);
+    else writeFileSync(worklogReadme, '# Worklog — Registro Inmutable de Sesiones\n\nAlmacena bitácoras raw/worklog/<YYYY-MM-DD>-<slug>.md.\n', 'utf-8');
+  }
+
+  const wikiIndex = join(wikiDir, 'index.md');
+  if (!existsSync(wikiIndex)) {
+    const src = join(templatesRoot, '02-DOCS', 'wiki', 'index.md');
+    if (existsSync(src)) copyFileSync(src, wikiIndex);
+    else writeFileSync(wikiIndex, `# Knowledge Base Index\n\n## harness\n\n| Article | Summary |\n|---------|---------|\n| [User Profile](harness/user-profile.md) | Technical register and user goal |\n| [Installation Plan](harness/installation-plan.md) | Cryptographic onboarding plan |\n| [Decisions Log](harness/decisions.md) | Ratified project and tooling decisions |\n`, 'utf-8');
+  }
+
+  const wikiLog = join(wikiDir, 'log.md');
+  if (!existsSync(wikiLog)) {
+    const src = join(templatesRoot, '02-DOCS', 'wiki', 'log.md');
+    if (existsSync(src)) copyFileSync(src, wikiLog);
+    else writeFileSync(wikiLog, `# Knowledge Base Changelog\n\n## [${new Date().toISOString().slice(0, 10)}] CyberAudit Initialization\n`, 'utf-8');
+  }
+
+  // 3. Harness documentation in 02-DOCS/wiki/harness/
+  const userProfile = `---
+technical_level: ${planRecord.technicalLevel}
+project_kind: ${planRecord.projectKind}
+---
+
+# User profile
+
+Goal: ${planRecord.goal}
+Workflow: ${planRecord.workflow}
+Software Scope: ${planRecord.softwareScope}
+Plan ID: ${planId}
+Installed At: ${new Date().toISOString()}
+`;
+  writeFileSync(join(harnessDir, 'user-profile.md'), userProfile, 'utf-8');
+
+  const installationPlan = `# Accepted harness plan
+
+Plan id: \`${planId}\`
+Installed At: ${new Date().toISOString()}
+Project: ${planRecord.projectKind} (${planRecord.softwareScope})
+Technical Level: ${planRecord.technicalLevel}
+Workflow: ${planRecord.workflow}
+
+| Kind | Component | Decision | Reason | Reevaluate when |
+| --- | --- | --- | --- | --- |
+| harness | control-plane | selected | Operational scaffolding 01-TOOLS/_TEMPLATE/ and 02-DOCS/ | on workspace structural rework |
+| always-on | cyberaudit-suggest | selected | Four-lane decisor (Answer, FTD, ASDD, Audit & Fix) in AGENTS.md | always active |
+| refuters | multi-agent-panel | selected | Three fresh-context refuters (Security, Architecture, QA) | on Tier-1/Tier-2 changes |
+| skills | core | selected | Foundational RSC skills (init, harness, orient, review, code-review, secure-coding) | on toolchain upgrade |
+| skills | cyberaudit | selected | 8-pillar audit suite (68 scanners) and automated TDD repair | continuous audit |
+| tools | external-orchestrator | selected | npm audit, pip-audit, gitleaks, trivy with graceful fallback | on dependency or container change |
+| ci-cd | strict-gate | deferred | Blocking GitHub Actions gate | on release readiness |
+| remote | telemetry | excluded | 100% local operation with zero remote data collection | permanent policy |
+`;
+  writeFileSync(join(harnessDir, 'installation-plan.md'), installationPlan, 'utf-8');
+
+  const decisionEntry = `# Project Decisions Log
+## [${new Date().toISOString()}] CyberAudit Onboarding Accepted
+- **Plan ID:** \`${planId}\`
+- **Decision:** Installed CyberAudit meta-harness with 68 scanners, 48 skills, operational scaffolding (01-TOOLS/), and chaos-to-knowledge engine (02-DOCS/).
+- **Technical Register:** ${planRecord.technicalLevel}
+- **Status:** Ratified
+`;
+  const decisionsPath = join(harnessDir, 'decisions.md');
+  if (!existsSync(decisionsPath)) {
+    writeFileSync(decisionsPath, decisionEntry, 'utf-8');
+  } else {
+    const existing = readFileSync(decisionsPath, 'utf-8');
+    if (!existing.includes(planId)) {
+      writeFileSync(decisionsPath, `${existing.trim()}\n\n${decisionEntry}`, 'utf-8');
+    }
+  }
 }
 
 function copyRecursive(src, dst) {
@@ -306,7 +433,12 @@ function handleDoctor() {
   const checks = [
     { name: 'Configuration (.cyberaudit.json or .rsc.json)', ok: existsSync(join(cwd, '.cyberaudit.json')) || existsSync(join(cwd, '.rsc.json')) },
     { name: 'Always-On Layer (.antigravity/AGENTS.md or AGENTS.md)', ok: existsSync(join(cwd, '.antigravity', 'AGENTS.md')) || existsSync(join(cwd, 'AGENTS.md')) },
-    { name: 'Knowledge & Profile (02-DOCS/wiki/harness/)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'user-profile.md')) },
+    { name: 'Operational Tooling (01-TOOLS/_TEMPLATE/test_connection.sh)', ok: existsSync(join(cwd, '01-TOOLS', '_TEMPLATE', 'test_connection.sh')) },
+    { name: 'Tooling Protection (01-TOOLS/.gitignore)', ok: existsSync(join(cwd, '01-TOOLS', '.gitignore')) },
+    { name: 'Knowledge Hub (02-DOCS/wiki/index.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'index.md')) },
+    { name: 'User Profile (02-DOCS/wiki/harness/user-profile.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'user-profile.md')) },
+    { name: 'Installation Plan (02-DOCS/wiki/harness/installation-plan.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'installation-plan.md')) },
+    { name: 'Decisions Log (02-DOCS/wiki/harness/decisions.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'decisions.md')) },
     { name: 'Python AuditEngine Runtime', ok: spawnSync('python', ['-c', 'import cyberaudit'], { encoding: 'utf-8' }).status === 0 },
     { name: 'External Tools Discovery', ok: true },
   ];

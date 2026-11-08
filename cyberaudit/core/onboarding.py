@@ -145,11 +145,160 @@ class OnboardingEngine:
             "managed_paths": [
                 ".cyberaudit.json",
                 ".antigravity/AGENTS.md",
-                "02-DOCS/wiki/harness/user-profile.md",
-                "02-DOCS/wiki/harness/decisions.md",
+                "01-TOOLS/.gitignore",
                 "01-TOOLS/_TEMPLATE/",
+                "02-DOCS/inbox/",
+                "02-DOCS/raw/worklog/",
+                "02-DOCS/wiki/index.md",
+                "02-DOCS/wiki/harness/user-profile.md",
+                "02-DOCS/wiki/harness/installation-plan.md",
+                "02-DOCS/wiki/harness/decisions.md",
             ],
         }
+
+    def ensure_harness_skeleton(self, record: Dict[str, Any], plan_id: str) -> None:
+        templates_root = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "templates",
+        )
+
+        # 1. 01-TOOLS scaffolding
+        tools_dir = os.path.join(self.target_dir, "01-TOOLS")
+        template_dir = os.path.join(tools_dir, "_TEMPLATE")
+        os.makedirs(template_dir, exist_ok=True)
+
+        tools_ignore = os.path.join(tools_dir, ".gitignore")
+        if not os.path.exists(tools_ignore):
+            src_ignore = os.path.join(templates_root, "01-TOOLS", ".gitignore")
+            if os.path.exists(src_ignore):
+                shutil.copyfile(src_ignore, tools_ignore)
+            else:
+                with open(tools_ignore, "w", encoding="utf-8") as f:
+                    f.write("# Escrito por CyberAudit: la capa de herramientas guarda credenciales.\n*/.env\n*/.env.*\n!*/.env.example\n*/keys/\n*/out/\n")
+
+        template_files = [
+            (".env.example", "# <TOOL_NAME> credentials\n<TOOL>_ENV=test\n<TOOL>_API_KEY=\n<TOOL>_API_SECRET=\n"),
+            ("CREDENTIALS.md", "# Credentials — <TOOL_NAME>\n\n## Provider dashboard\n- URL: https://...\n"),
+            (".gitignore", ".env\nkeys/\nout/\n*.json\n!*.example.json\n"),
+            ("README.md", "# <TOOL_NAME>\n\n> Operational tooling.\n"),
+            ("test_connection.sh", "#!/usr/bin/env bash\nset -euo pipefail\necho \"OK — credentials valid.\"\n"),
+        ]
+
+        for fname, fallback in template_files:
+            dst = os.path.join(template_dir, fname)
+            if not os.path.exists(dst):
+                lookup = "gitignore" if fname == ".gitignore" else fname
+                src = os.path.join(templates_root, "01-TOOLS", "_TEMPLATE", lookup)
+                if os.path.exists(src):
+                    shutil.copyfile(src, dst)
+                else:
+                    with open(dst, "w", encoding="utf-8") as f:
+                        f.write(fallback)
+
+        # 2. 02-DOCS scaffolding
+        docs_dir = os.path.join(self.target_dir, "02-DOCS")
+        inbox_dir = os.path.join(docs_dir, "inbox")
+        worklog_dir = os.path.join(docs_dir, "raw", "worklog")
+        wiki_dir = os.path.join(docs_dir, "wiki")
+        harness_dir = os.path.join(wiki_dir, "harness")
+
+        os.makedirs(inbox_dir, exist_ok=True)
+        os.makedirs(worklog_dir, exist_ok=True)
+        os.makedirs(harness_dir, exist_ok=True)
+
+        inbox_readme = os.path.join(inbox_dir, "README.md")
+        if not os.path.exists(inbox_readme):
+            src_inbox = os.path.join(templates_root, "02-DOCS", "inbox", "README.md")
+            if os.path.exists(src_inbox):
+                shutil.copyfile(src_inbox, inbox_readme)
+            else:
+                with open(inbox_readme, "w", encoding="utf-8") as f:
+                    f.write("# Inbox — Ingesta de Datos en Crudo\n\nDeposita aquí cualquier archivo en crudo para ser indexado por CyberAudit.\n")
+
+        worklog_readme = os.path.join(worklog_dir, "README.md")
+        if not os.path.exists(worklog_readme):
+            src_worklog = os.path.join(templates_root, "02-DOCS", "raw", "worklog", "README.md")
+            if os.path.exists(src_worklog):
+                shutil.copyfile(src_worklog, worklog_readme)
+            else:
+                with open(worklog_readme, "w", encoding="utf-8") as f:
+                    f.write("# Worklog — Registro Inmutable de Sesiones\n\nAlmacena bitácoras raw/worklog/<YYYY-MM-DD>-<slug>.md.\n")
+
+        wiki_index = os.path.join(wiki_dir, "index.md")
+        if not os.path.exists(wiki_index):
+            src_index = os.path.join(templates_root, "02-DOCS", "wiki", "index.md")
+            if os.path.exists(src_index):
+                shutil.copyfile(src_index, wiki_index)
+            else:
+                with open(wiki_index, "w", encoding="utf-8") as f:
+                    f.write("# Knowledge Base Index\n\n## harness\n\n| Article | Summary |\n|---------|---------|\n| [User Profile](harness/user-profile.md) | Technical register and user goal |\n| [Installation Plan](harness/installation-plan.md) | Cryptographic onboarding plan |\n| [Decisions Log](harness/decisions.md) | Ratified project and tooling decisions |\n")
+
+        wiki_log = os.path.join(wiki_dir, "log.md")
+        if not os.path.exists(wiki_log):
+            src_log = os.path.join(templates_root, "02-DOCS", "wiki", "log.md")
+            if os.path.exists(src_log):
+                shutil.copyfile(src_log, wiki_log)
+            else:
+                with open(wiki_log, "w", encoding="utf-8") as f:
+                    f.write(f"# Knowledge Base Changelog\n\n## [{datetime.now(timezone.utc).strftime('%Y-%m-%d')}] CyberAudit Initialization\n")
+
+        # 3. Harness documents
+        tech_level = record.get("technical_level", "technical")
+        user_profile = f"""---
+technical_level: {tech_level}
+project_kind: {record.get('project_kind', 'software')}
+---
+
+# User profile
+
+Goal: {record.get('goal', 'Auditoría integral')}
+Workflow: {record.get('workflow', 'main')}
+Software Scope: {record.get('software_scope', 'growing')}
+Plan ID: {plan_id}
+Installed At: {datetime.now(timezone.utc).isoformat()}
+"""
+        with open(os.path.join(harness_dir, "user-profile.md"), "w", encoding="utf-8") as f:
+            f.write(user_profile)
+
+        installation_plan = f"""# Accepted harness plan
+
+Plan id: `{plan_id}`
+Installed At: {datetime.now(timezone.utc).isoformat()}
+Project: {record.get('project_kind', 'software')} ({record.get('software_scope', 'growing')})
+Technical Level: {tech_level}
+Workflow: {record.get('workflow', 'main')}
+
+| Kind | Component | Decision | Reason | Reevaluate when |
+| --- | --- | --- | --- | --- |
+| harness | control-plane | selected | Operational scaffolding 01-TOOLS/_TEMPLATE/ and 02-DOCS/ | on workspace structural rework |
+| always-on | cyberaudit-suggest | selected | Four-lane decisor (Answer, FTD, ASDD, Audit & Fix) in AGENTS.md | always active |
+| refuters | multi-agent-panel | selected | Three fresh-context refuters (Security, Architecture, QA) | on Tier-1/Tier-2 changes |
+| skills | core | selected | Foundational RSC skills (init, harness, orient, review, code-review, secure-coding) | on toolchain upgrade |
+| skills | cyberaudit | selected | 8-pillar audit suite (68 scanners) and automated TDD repair | continuous audit |
+| tools | external-orchestrator | selected | npm audit, pip-audit, gitleaks, trivy with graceful fallback | on dependency or container change |
+| ci-cd | strict-gate | deferred | Blocking GitHub Actions gate | on release readiness |
+| remote | telemetry | excluded | 100% local operation with zero remote data collection | permanent policy |
+"""
+        with open(os.path.join(harness_dir, "installation-plan.md"), "w", encoding="utf-8") as f:
+            f.write(installation_plan)
+
+        decision_log = f"""# Project Decisions Log
+## [{datetime.now(timezone.utc).isoformat()}] CyberAudit Onboarding Accepted
+- **Plan ID:** `{plan_id}`
+- **Decision:** Installed CyberAudit meta-harness with 68 scanners, 48 skills, operational scaffolding (01-TOOLS/), and chaos-to-knowledge engine (02-DOCS/).
+- **Technical Register:** {tech_level}
+- **Status:** Ratified
+"""
+        decisions_path = os.path.join(harness_dir, "decisions.md")
+        if not os.path.exists(decisions_path):
+            with open(decisions_path, "w", encoding="utf-8") as f:
+                f.write(decision_log)
+        else:
+            with open(decisions_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if plan_id not in content:
+                with open(decisions_path, "a", encoding="utf-8") as f:
+                    f.write(f"\n{decision_log}")
 
     def apply_plan(self, plan: Dict[str, Any], accepted_plan_id: str) -> Tuple[bool, str]:
         if plan["plan_id"] != accepted_plan_id:
@@ -158,12 +307,9 @@ class OnboardingEngine:
         plan_id = plan["plan_id"]
         record = plan["record"]
         tech_level = record["technical_level"]
-        workflow = record["workflow"]
 
-        # 1. Scaffolding directories
+        # 1. Scaffolding base directory
         os.makedirs(os.path.join(self.target_dir, ".cyberaudit"), exist_ok=True)
-        os.makedirs(os.path.join(self.target_dir, "01-TOOLS", "_TEMPLATE"), exist_ok=True)
-        os.makedirs(os.path.join(self.target_dir, "02-DOCS", "wiki", "harness"), exist_ok=True)
         os.makedirs(os.path.join(self.target_dir, ".antigravity", "rsc"), exist_ok=True)
 
         # 2. Persist metadata
@@ -180,28 +326,8 @@ class OnboardingEngine:
         with open(os.path.join(self.target_dir, ".rsc.json"), "w", encoding="utf-8") as f:
             json.dump({"version": 1, "targets": record["targets"], "skills": ["cyberaudit-full", "cyberaudit-autofix"]}, f, indent=2)
 
-        # 3. User profile & decisions
-        user_profile = f"""# User Profile
-- **Technical Level:** {tech_level}
-- **Project Kind:** {record['project_kind']}
-- **Goal:** {record['goal']}
-- **Software Scope:** {record['software_scope']}
-- **Workflow:** {workflow}
-- **Plan ID:** {plan_id}
-- **Installed At:** {datetime.now(timezone.utc).isoformat()}
-"""
-        with open(os.path.join(self.target_dir, "02-DOCS", "wiki", "harness", "user-profile.md"), "w", encoding="utf-8") as f:
-            f.write(user_profile)
-
-        decision_log = f"""# Project Decisions Log
-## [{datetime.now(timezone.utc).isoformat()}] CyberAudit Onboarding Accepted
-- **Plan ID:** {plan_id}
-- **Decision:** Installed CyberAudit meta-harness with 68 scanners, 48 skills, and always-on decisor.
-- **Technical Register:** {tech_level}
-- **Status:** Ratified
-"""
-        with open(os.path.join(self.target_dir, "02-DOCS", "wiki", "harness", "decisions.md"), "w", encoding="utf-8") as f:
-            f.write(decision_log)
+        # 3. Comprehensive scaffolding of 01-TOOLS and 02-DOCS
+        self.ensure_harness_skeleton(record, plan_id)
 
         # 4. Ingest always-on AGENTS.md
         always_on = build_always_on_agents_md(tech_level)

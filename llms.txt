@@ -68,23 +68,39 @@ Carril Inicial: <Answer | FTD | ASDD | Audit & Fix>
 Rutas a Gobernar:
   .cyberaudit.json
   .antigravity/AGENTS.md
-  02-DOCS/wiki/harness/user-profile.md
-  02-DOCS/wiki/harness/decisions.md
+  01-TOOLS/.gitignore
   01-TOOLS/_TEMPLATE/
+  02-DOCS/inbox/
+  02-DOCS/raw/worklog/
+  02-DOCS/wiki/index.md
+  02-DOCS/wiki/harness/user-profile.md
+  02-DOCS/wiki/harness/installation-plan.md
+  02-DOCS/wiki/harness/decisions.md
 ```
 
 ### Paso 5: Espera la Aceptación Explícita del Usuario
 **DETENTE.** No crees, modifiques ni escribas un solo archivo hasta que el usuario responda explícitamente aceptando el Plan ID (por ejemplo: *"acepto PLAN-a7f4c91e"* o *"sí, procede"*).
 
 ### Paso 6: Andamiaje y Verificación
-Tras la aceptación:
-1. Crea `02-DOCS/wiki/harness/user-profile.md` con el nivel técnico y objetivos.
-2. Crea `02-DOCS/wiki/harness/decisions.md` registrando la decisión de instalación.
-3. Inyecta en `.antigravity/AGENTS.md` (y `AGENTS.md` / `CLAUDE.md`) la capa *always-on* `cyberaudit-suggest`.
-4. Copia las skills a `.antigravity/rsc/` o `.cyberaudit/skills/`.
-5. Confirma con la señal:
-   `CYBERAUDIT_ONBOARDING_READY PLAN-<sha256-hex>`
-6. Cierra con el bloque-brújula de orientación (`📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso`).
+Tras la aceptación explícita:
+1. **Andamiaje de Herramientas Operativas (`01-TOOLS/`):**
+   - Crea `01-TOOLS/.gitignore` para proteger credenciales (`*/.env`, `*/keys/`, `*/out/`).
+   - Scaffolding de `01-TOOLS/_TEMPLATE/`: `.env.example`, `CREDENTIALS.md`, `.gitignore`, `README.md`, `test_connection.sh`.
+2. **Motor Caos a Conocimiento (`02-DOCS/`):**
+   - Crea `02-DOCS/inbox/README.md` (buzón para ingesta de datos brutos).
+   - Crea `02-DOCS/raw/worklog/README.md` (bitácora de evidencias y sesiones).
+   - Crea `02-DOCS/wiki/index.md` (catálogo principal OKF v0.1 / Obsidian).
+   - Crea `02-DOCS/wiki/log.md` (registro cronológico de cambios de conocimiento).
+   - Crea `02-DOCS/wiki/harness/user-profile.md` con el nivel técnico, objetivo y alcance.
+   - Crea `02-DOCS/wiki/harness/installation-plan.md` con el desglose formal de componentes y Plan ID.
+   - Crea `02-DOCS/wiki/harness/decisions.md` registrando la decisión ratificada.
+3. **Capa Always-On de Gobernanza:**
+   - Inyecta en `.antigravity/AGENTS.md` (y `AGENTS.md` / `CLAUDE.md`) la capa `cyberaudit-suggest` con los 4 carriles (Answer, FTD, ASDD, Audit & Fix) y panel de 3 refutadores.
+4. **Catálogo de Habilidades:**
+   - Copia o enlaza las 48 skills a `.antigravity/rsc/` o `.cyberaudit/skills/`.
+5. **Confirmación y Señal:**
+   - Emite obligatoriamente: `CYBERAUDIT_ONBOARDING_READY PLAN-<sha256-hex>`
+   - Cierra con el bloque-brújula de orientación: `📍 Dónde estamos · ✅ Qué hicimos · 🧭 Qué decidimos · ➡️ Siguiente paso (terminando en pregunta)`.
 
 ---
 
