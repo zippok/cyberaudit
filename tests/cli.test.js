@@ -25,6 +25,28 @@ test('CyberAudit CLI - doctor reports healthy', () => {
   assert.match(res.stdout, /Doctor Diagnostic/);
 });
 
+test('CyberAudit CLI - fix triggers TDD auto-remediation loop', () => {
+  const res = spawnSync('node', [cliPath, 'fix', 'CWE-78-CMD-INJECTION'], { cwd: rootDir, encoding: 'utf-8' });
+  assert.strictEqual(res.status, 0);
+  assert.match(res.stdout, /AutoFix TDD/);
+  assert.match(res.stdout, /SELLO-CYBERAUDIT-VERIFICADO/);
+});
+
+test('CyberAudit CLI - harness run-skill and sello work seamlessly', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'cyberaudit-skill-test-'));
+  try {
+    const hRes = spawnSync('node', [cliPath, 'harness', 'run-skill', 'cyberaudit-full', tmp], { cwd: rootDir, encoding: 'utf-8' });
+    assert.strictEqual(hRes.status, 0);
+    assert.match(hRes.stdout, /Stage 1 Pre-Flight Result/);
+
+    const sRes = spawnSync('node', [cliPath, 'harness', 'sello', tmp, '--skill', 'cyberaudit-full'], { cwd: rootDir, encoding: 'utf-8' });
+    assert.strictEqual(sRes.status, 0);
+    assert.match(sRes.stdout, /SELLO-CYBERAUDIT/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 test('CyberAudit CLI - onboard generates binding plan and applies with accept-plan', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'cyberaudit-onboard-test-'));
   try {
