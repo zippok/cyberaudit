@@ -396,6 +396,7 @@ function handleAudit() {
   
   const pyScript = `
 import sys, json
+sys.path.insert(0, '${__dirname.replace(/\\/g, '/')}')
 from cyberaudit.core.engine import AuditEngine
 engine = AuditEngine()
 report = engine.scan_path('${target.replace(/\\/g, '/')}')
@@ -439,7 +440,7 @@ function handleDoctor() {
     { name: 'User Profile (02-DOCS/wiki/harness/user-profile.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'user-profile.md')) },
     { name: 'Installation Plan (02-DOCS/wiki/harness/installation-plan.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'installation-plan.md')) },
     { name: 'Decisions Log (02-DOCS/wiki/harness/decisions.md)', ok: existsSync(join(cwd, '02-DOCS', 'wiki', 'harness', 'decisions.md')) },
-    { name: 'Python AuditEngine Runtime', ok: spawnSync('python', ['-c', 'import cyberaudit'], { encoding: 'utf-8' }).status === 0 },
+    { name: 'Python AuditEngine Runtime', ok: spawnSync('python', ['-c', 'import sys; sys.path.insert(0, "' + __dirname.replace(/\\/g, '/') + '"); import cyberaudit'], { encoding: 'utf-8' }).status === 0 },
     { name: 'External Tools Discovery', ok: true },
   ];
   let allOk = true;
@@ -470,16 +471,18 @@ function handleHarness() {
     console.log(`[CyberAudit Harness] Executing Stage 1 deterministic pre-flight for skill: ${skillId} on ${targetPath}...`);
     const pyScript = `
 import sys, json
-from cyberaudit.core.engine import AuditEngine
-engine = AuditEngine()
-report = engine.scan_path('${targetPath.replace(/\\/g, '/')}')
-print(json.dumps(report.to_dict()))
+sys.path.insert(0, '${__dirname.replace(/\\/g, '/')}')
+from cyberaudit.core.skill_harness import CyberAuditSkillHarness
+harness = CyberAuditSkillHarness()
+res = harness.run_skill('${skillId}', '${targetPath.replace(/\\/g, '/')}')
+print(json.dumps(res))
 `;
     const res = spawnSync('python', ['-c', pyScript], { encoding: 'utf-8' });
     if (res.status === 0) {
       try {
         const rep = JSON.parse(res.stdout);
-        console.log(`Stage 1 Pre-Flight Result: ${rep.execution_status} (${rep.findings.length} findings across ${rep.files_scanned} files in ${rep.duration_seconds}s)`);
+        console.log(`Stage 1 Pre-Flight Result: ${rep.verdict} (${rep.findings.length} findings across ${rep.files_scanned} files in ${rep.skill_id})`);
+        console.log(`Scanners Executed (${rep.scanners_executed_count}): ${rep.scanners_executed.join(', ')}`);
         for (const f of rep.findings.slice(0, 5)) {
           console.log(`  - [${f.severity}] ${f.id}: ${f.title} (${f.file_path}:${f.line_number})`);
         }
@@ -503,6 +506,7 @@ print(json.dumps(report.to_dict()))
     console.log(`[CyberAudit Sello] Issuing cryptographic verification seal for ${skillId} on ${target}...`);
     const pyScript = `
 import sys, json
+sys.path.insert(0, '${__dirname.replace(/\\/g, '/')}')
 from cyberaudit.core.skill_harness import CyberAuditSkillHarness
 harness = CyberAuditSkillHarness()
 sello = harness.emit_sello('${target.replace(/\\/g, '/')}', skill_id='${skillId}')
@@ -536,22 +540,75 @@ function handleFix() {
     console.log('Usage: cyberaudit fix <finding-id> [--path <path>]');
     return;
   }
-  console.log(`[CyberAudit AutoFix TDD] Initiating 3-stage repair loop for finding: ${findingId}...`);
-  console.log(`  1. Red Test: Generating reproducing test case...`);
-  console.log(`  2. Green Patch: Applying atomic defensive patch...`);
-  console.log(`  3. Static Verify: Re-scanning with AuditEngine & verifying regression-free...`);
+  const targetPath = flags['path'] || process.cwd();
+  console.log(`=== CyberAudit Real TDD Remediation Loop ===`);
+  console.log(`Target: ${resolve(targetPath)} | Finding: ${findingId}`);
   const pyScript = `
 import sys, json
-from cyberaudit.core.engine import AuditEngine
-engine = AuditEngine()
-print(f"Verified remediation ready for {sys.argv[1]}")
+sys.path.insert(0, '${__dirname.replace(/\\/g, '/')}')
+from cyberaudit.core.tdd_remediation import TddRemediationEngine
+engine = TddRemediationEngine(target_root='${targetPath.replace(/\\/g, '/')}')
+res = engine.execute_tdd_fix('${findingId}')
+print(json.dumps(res))
 `;
-  const res = spawnSync('python', ['-c', pyScript, findingId], { encoding: 'utf-8' });
+  const res = spawnSync('python', ['-c', pyScript], { encoding: 'utf-8' });
   if (res.status === 0) {
-    console.log(`✅ Remediation cycle completed for ${findingId}: tests green, 0 regressions.`);
-    console.log(`SELLO-CYBERAUDIT-VERIFICADO AUTOFIX-${createHash('sha256').update(findingId + Date.now()).digest('hex').slice(0, 16)}`);
+    try {
+      const r = JSON.parse(res.stdout);
+      if (r.status === 'NOT_FOUND') {
+        console.log(`ℹ️ Finding '${findingId}' is clean or not present in active audit.`);
+        return;
+      }
+      console.log(`  1. Red Test Repro: ${r.repro_test_file ? 'CREATED (' + r.repro_test_file + ')' : 'VERIFIED'}`);
+      console.log(`  2. Atomic Defensive Patch: ${r.patch_notes}`);
+      console.log(`  3. Green Test Suite: ${r.green_tests_passed ? 'ALL TESTS GREEN' : 'TESTS FAILED'}`);
+      console.log(`  4. Static Zero-Regression: ${r.success ? 'VERIFIED (0 findings remaining)' : 'FLAGGED'}`);
+      if (r.seal_hash) {
+        console.log(`\n${r.seal_type} ${r.seal_hash}`);
+      }
+    } catch (e) {
+      console.log(res.stdout);
+    }
   } else {
     console.error('AutoFix execution error:', res.stderr || res.error);
+  }
+}
+
+function handleSetupTools() {
+  const installFlag = flags['install'] || args.includes('--install');
+  console.log('=== CyberAudit External Security Tools Orchestrator ===');
+  const pyScript = `
+import sys, json
+sys.path.insert(0, '${__dirname.replace(/\\/g, '/')}')
+from cyberaudit.core.external_orchestrator import ExternalToolOrchestrator
+if ${installFlag ? 'True' : 'False'}:
+    ExternalToolOrchestrator.install_missing_tools()
+diag = ExternalToolOrchestrator.get_tools_diagnostic()
+print(json.dumps(diag))
+`;
+  const res = spawnSync('python', ['-c', pyScript], { encoding: 'utf-8' });
+  if (res.status === 0) {
+    try {
+      const diag = JSON.parse(res.stdout);
+      for (const [tool, info] of Object.entries(diag)) {
+        const icon = info.installed ? '✅' : '❌';
+        const ver = info.version ? `(${info.version})` : '(not installed)';
+        console.log(`  ${icon} ${tool}: ${ver} - ${info.role}`);
+        if (info.binary) {
+          console.log(`     Path: ${info.binary}`);
+        }
+      }
+      const missing = Object.entries(diag).filter(([_, info]) => !info.installed);
+      if (missing.length > 0 && !installFlag) {
+        console.log(`\n💡 Run 'cyberaudit setup-tools --install' to automatically provision missing tools.`);
+      } else if (missing.length === 0) {
+        console.log(`\nAll 4 industry external tools are operational with native blindspot coverage.`);
+      }
+    } catch (e) {
+      console.log(res.stdout);
+    }
+  } else {
+    console.error('Tool check error:', res.stderr || res.error);
   }
 }
 switch (command) {
@@ -574,6 +631,9 @@ switch (command) {
   case 'fix':
     handleFix();
     break;
+  case 'setup-tools':
+    handleSetupTools();
+    break;
   case 'help':
     console.log(`CyberAudit CLI v${VERSION}`);
     console.log('Usage:');
@@ -582,6 +642,7 @@ switch (command) {
     console.log('  cyberaudit fix <finding-id>');
     console.log('  cyberaudit harness run-skill <skill-id>');
     console.log('  cyberaudit harness sello [path] --skill <skill-id>');
+    console.log('  cyberaudit setup-tools [--install]');
     console.log('  cyberaudit doctor');
     console.log('  cyberaudit list');
     console.log('  cyberaudit help');

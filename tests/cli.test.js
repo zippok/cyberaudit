@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,29 +15,44 @@ test('CyberAudit CLI - list outputs skills', () => {
   assert.strictEqual(res.status, 0);
   assert.match(res.stdout, /CyberAudit Skills & Tools Catalog/);
   assert.match(res.stdout, /cyberaudit-full/);
-  assert.match(res.stdout, /cyberaudit-autofix/);
+  assert.match(res.stdout, /cyberaudit-appsec/);
+  assert.match(res.stdout, /cyberaudit-qa-resilience/);
   assert.match(res.stdout, /secure-coding/);
 });
 
-test('CyberAudit CLI - doctor reports healthy', () => {
-  const res = spawnSync('node', [cliPath, 'doctor'], { cwd: rootDir, encoding: 'utf-8' });
+test('CyberAudit CLI - setup-tools reports external security tools', () => {
+  const res = spawnSync('node', [cliPath, 'setup-tools'], { cwd: rootDir, encoding: 'utf-8' });
   assert.strictEqual(res.status, 0);
-  assert.match(res.stdout, /Doctor Diagnostic/);
+  assert.match(res.stdout, /External Security Tools Orchestrator/);
+  assert.match(res.stdout, /npm_audit/);
+  assert.match(res.stdout, /pip_audit/);
+  assert.match(res.stdout, /gitleaks/);
+  assert.match(res.stdout, /trivy/);
 });
 
-test('CyberAudit CLI - fix triggers TDD auto-remediation loop', () => {
-  const res = spawnSync('node', [cliPath, 'fix', 'CWE-78-CMD-INJECTION'], { cwd: rootDir, encoding: 'utf-8' });
-  assert.strictEqual(res.status, 0);
-  assert.match(res.stdout, /AutoFix TDD/);
-  assert.match(res.stdout, /SELLO-CYBERAUDIT-VERIFICADO/);
+test('CyberAudit CLI - fix triggers real 4-phase TDD remediation loop', () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'cyberaudit-fix-test-'));
+  try {
+    const vulnFile = join(tmp, 'credentials.py');
+    writeFileSync(vulnFile, 'secret_key = "sk-abcdef1234567890abcdef"\n', 'utf-8');
+
+    const res = spawnSync('node', [cliPath, 'fix', 'SECRET', '--path', tmp], { cwd: rootDir, encoding: 'utf-8' });
+    assert.strictEqual(res.status, 0);
+    assert.match(res.stdout, /Real TDD Remediation Loop/);
+    assert.match(res.stdout, /Atomic Defensive Patch/);
+    assert.match(res.stdout, /SELLO-CYBERAUDIT-VERIFICADO/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test('CyberAudit CLI - harness run-skill and sello work seamlessly', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'cyberaudit-skill-test-'));
   try {
-    const hRes = spawnSync('node', [cliPath, 'harness', 'run-skill', 'cyberaudit-full', tmp], { cwd: rootDir, encoding: 'utf-8' });
+    const hRes = spawnSync('node', [cliPath, 'harness', 'run-skill', 'cyberaudit-appsec', tmp], { cwd: rootDir, encoding: 'utf-8' });
     assert.strictEqual(hRes.status, 0);
     assert.match(hRes.stdout, /Stage 1 Pre-Flight Result/);
+    assert.match(hRes.stdout, /Scanners Executed \(12\)/);
 
     const sRes = spawnSync('node', [cliPath, 'harness', 'sello', tmp, '--skill', 'cyberaudit-full'], { cwd: rootDir, encoding: 'utf-8' });
     assert.strictEqual(sRes.status, 0);

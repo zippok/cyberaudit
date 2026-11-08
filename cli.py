@@ -1862,6 +1862,15 @@ def main():
     doctor_parser = subparsers.add_parser("doctor", help="Check CyberAudit harness health, configuration, and scanner status")
     doctor_parser.add_argument("target", nargs="?", default=".", help="Target directory")
 
+    # ── Command: fix (Real 4-phase TDD AutoFix) ────────────────────────────
+    fix_parser = subparsers.add_parser("fix", help="Real 4-phase TDD auto-remediation loop (Red Test -> Patch -> Green Test -> Sello)")
+    fix_parser.add_argument("finding_id", help="Finding ID or keyword to remediate")
+    fix_parser.add_argument("target", nargs="?", default=".", help="Target directory")
+
+    # ── Command: setup-tools (External industry tools orchestrator) ────────
+    setup_tools_parser = subparsers.add_parser("setup-tools", help="Check and provision external industry security tools (npm audit, pip-audit, gitleaks, trivy)")
+    setup_tools_parser.add_argument("--install", action="store_true", help="Automatically install missing tools via system package manager")
+
     # ── Command: audit (Top-level alias for full-spectrum scan) ─────────────
     audit_parser = subparsers.add_parser("audit", help="Run full-spectrum audit across all 8 pillars")
     audit_parser.add_argument("target", nargs="?", default=".", help="Target path to audit")
@@ -2373,6 +2382,40 @@ def main():
                 )
         else:
             harness_parser.print_help()
+    elif args.command == "fix":
+        from cyberaudit.core.tdd_remediation import TddRemediationEngine
+        engine = TddRemediationEngine(target_root=args.target)
+        console.print(f"[bold cyan]=== CyberAudit Real TDD Remediation Loop ===[/bold cyan]")
+        console.print(f"Target: [bold]{os.path.abspath(args.target)}[/bold] | Finding: [bold]{args.finding_id}[/bold]")
+        res = engine.execute_tdd_fix(args.finding_id)
+        if res.get("status") == "NOT_FOUND":
+            console.print(f"[yellow]ℹ Finding '{args.finding_id}' is clean or not present in active audit.[/yellow]")
+        else:
+            console.print(f"  1. Red Test Repro: [green]{'CREATED (' + res['repro_test_file'] + ')' if res.get('repro_test_file') else 'VERIFIED'}[/green]")
+            console.print(f"  2. Atomic Defensive Patch: [green]{res.get('patch_notes')}[/green]")
+            console.print(f"  3. Green Test Suite: [green]{'ALL TESTS GREEN' if res.get('green_tests_passed') else 'TESTS FAILED'}[/green]")
+            console.print(f"  4. Static Zero-Regression: [green]{'VERIFIED (0 findings remaining)' if res.get('success') else 'FLAGGED'}[/green]")
+            if res.get("seal_hash"):
+                console.print(f"\n[bold green]{res.get('seal_type')}: {res.get('seal_hash')}[/bold green]")
+    elif args.command == "setup-tools":
+        from cyberaudit.core.external_orchestrator import ExternalToolOrchestrator
+        console.print("[bold cyan]=== CyberAudit External Security Tools Orchestrator ===[/bold cyan]")
+        if getattr(args, "install", False):
+            install_res = ExternalToolOrchestrator.install_missing_tools()
+            for t, status in install_res.items():
+                console.print(f"  [dim]Install status for {t}: {status}[/dim]")
+        diag = ExternalToolOrchestrator.get_tools_diagnostic()
+        for tool, info in diag.items():
+            icon = "[green]✅[/green]" if info["installed"] else "[red]❌[/red]"
+            ver = f"({info['version']})" if info.get("version") else "(not installed)"
+            console.print(f"  {icon} [bold]{tool}[/bold]: {ver} - {info['role']}")
+            if info.get("binary"):
+                console.print(f"     [dim]Path: {info['binary']}[/dim]")
+        missing = [t for t, i in diag.items() if not i["installed"]]
+        if missing and not getattr(args, "install", False):
+            console.print("\n[yellow]💡 Run 'python cli.py setup-tools --install' to automatically provision missing tools.[/yellow]")
+        elif not missing:
+            console.print("\n[green]All 4 industry external tools are operational with native blindspot coverage.[/green]")
 
 
 if __name__ == "__main__":

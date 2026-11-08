@@ -298,5 +298,27 @@ class TestDefinitiveScannersAndHarness(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(tmpdir, "02-DOCS", "wiki", "harness", "decisions.md")))
 
 
+    def test_tdd_remediation_engine_real_patch_and_sello(self):
+        """Verifies that TddRemediationEngine locates finding, applies real patch, and emits seal."""
+        from cyberaudit.core.tdd_remediation import TddRemediationEngine
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "config.py")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write('aws_key = "AKIAIOSFODNN7EXAMPLE"\n')
+
+            engine = TddRemediationEngine(target_root=tmpdir)
+            finding = engine.find_finding("SECRET")
+            self.assertIsNotNone(finding)
+            self.assertEqual(finding.cwe_id, "CWE-798")
+
+            res = engine.execute_tdd_fix("SECRET")
+            self.assertTrue(res["success"])
+            self.assertEqual(res["status"], "RESOLVED")
+            self.assertIn("os.environ.get", res["patch_notes"])
+            self.assertIsNotNone(res["seal_hash"])
+            self.assertIn("SELLO-CYBERAUDIT", res["seal_type"])
+
+
 if __name__ == "__main__":
     unittest.main()
